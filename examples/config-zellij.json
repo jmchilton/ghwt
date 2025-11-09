@@ -1,0 +1,12 @@
+{
+  "projectsRoot": "~/projects",
+  "repositoriesDir": "repositories",
+  "worktreesDir": "worktrees",
+  "vaultPath": "~/my-obsidian-vault",
+  "obsidianVaultName": "projects",
+  "shellCommandExecuteId": "abc123def456",
+  "syncInterval": null,
+  "defaultBaseBranch": "dev",
+  "terminalMultiplexer": "zellij",
+  "terminalUI": "none"
+}

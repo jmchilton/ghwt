@@ -1,0 +1,30 @@
+# Example terminal session config for both tmux and zellij
+# Place in: ~/projects/terminal-session-config/<repo-name>/.ghwt-session.yaml
+
+name: galaxy
+root: "{{worktree_path}}"
+
+# Pre-commands run before each pane (useful for virtualenv activation, etc.)
+pre:
+  - "[ -f .venv/bin/activate ] && source .venv/bin/activate"
+
+# Windows/tabs configuration
+windows:
+  - name: client
+    root: client
+    panes:
+      - npm run dev
+      - npm run lint
+
+  - name: server
+    panes:
+      - make run
+      - make test
+
+  - name: shell
+    # Empty pane for interactive use
+
+  - name: logs
+    root: .
+    panes:
+      - tail -f server.log
