@@ -39,7 +39,7 @@ export async function createCommand(project: string, branchArg: string): Promise
   // Determine branch
   let branch = "";
   let prUrl = "";
-  let prInfo: any = null;
+  let prInfo: { headRefName: string; url: string; checks?: string } | null = null;
 
   if (branchArg.startsWith("feature/") || branchArg.startsWith("bug/")) {
     branch = branchArg;
@@ -51,7 +51,7 @@ export async function createCommand(project: string, branchArg: string): Promise
         cwd: repoPath,
       });
       // Extract owner/repo from URL (e.g., git@github.com:galaxyproject/galaxy.git -> galaxyproject/galaxy)
-      const repoMatch = repoUrl.match(/[:\/]([^\/]+)\/(.+?)(?:\.git)?$/);
+      const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
       const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
 
       prInfo = await getPRInfo(prNumber, ghRepo);
@@ -128,7 +128,7 @@ export async function createCommand(project: string, branchArg: string): Promise
     try {
       const prNumber = branchArg.slice(3); // Remove "pr/" prefix
       const repoUrl = gitInfo.remoteUrl;
-      const repoMatch = repoUrl.match(/[:\/]([^\/]+)\/(.+?)(?:\.git)?$/);
+      const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
       const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2].replace(/\.git$/, "")}` : project;
       const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, "") : project;
 
@@ -184,7 +184,7 @@ export async function createCommand(project: string, branchArg: string): Promise
   try {
     await launchSession(project, branch, worktreePath, config);
     console.log("🖥️  Terminal session launched");
-  } catch (error) {
+  } catch {
     console.log(`⚠️  Terminal session not configured`);
   }
 

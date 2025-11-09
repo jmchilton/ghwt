@@ -5,7 +5,7 @@ import {
   mkdirSync,
   statSync,
 } from "fs";
-import { join, dirname } from "path";
+import { dirname } from "path";
 import YAML from "js-yaml";
 import { NoteFrontmatter, WorktreeMetadata } from "../types.js";
 import { loadConfig } from "./config.js";

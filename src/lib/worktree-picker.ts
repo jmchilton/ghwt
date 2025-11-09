@@ -1,5 +1,5 @@
 import Enquirer from "enquirer";
-import { listWorktrees, WorktreeInfo, formatWorktreeForDisplay } from "./worktree-list.js";
+import { listWorktrees, WorktreeInfo } from "./worktree-list.js";
 
 export interface PickedWorktree {
   project: string;

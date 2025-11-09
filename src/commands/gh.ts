@@ -38,12 +38,9 @@ export async function ghCommand(project?: string, branch?: string): Promise<void
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const reposRoot = join(projectsRoot, config.repositoriesDir);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
   const vaultRoot = expandPath(config.vaultPath);
 
   const repoPath = join(reposRoot, selectedProject);
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, "-")}`;
-  const worktreePath = join(worktreesRoot, worktreeName);
   const notePath = join(vaultRoot, "projects", selectedProject, "worktrees", selectedBranch.replace(/\//g, "-") + ".md");
 
   // Check if repo exists
@@ -71,7 +68,7 @@ export async function ghCommand(project?: string, branch?: string): Promise<void
       });
 
       // Extract owner/repo from URL
-      const repoMatch = remoteUrl.match(/[:\/]([^\/]+)\/(.+?)(?:\.git)?$/);
+      const repoMatch = remoteUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
       if (repoMatch) {
         const owner = repoMatch[1];
         const repo = repoMatch[2].replace(/\.git$/, "");

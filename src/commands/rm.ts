@@ -33,7 +33,7 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
   try {
     await killSession(sessionName, config);
     console.log(`✅ Killed terminal session: ${sessionName}`);
-  } catch (error) {
+  } catch {
     console.log(`⚠️  Terminal session not found: ${sessionName}`);
   }
 

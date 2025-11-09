@@ -15,7 +15,7 @@ export async function cloneCommand(
 
   // Extract repo name from URL
   // Handles: git@github.com:owner/repo.git or https://github.com/owner/repo.git or https://github.com/owner/repo
-  const repoMatch = repoUrl.match(/(?:^|\/|:)([^\/]+)\/([^\/]+?)(?:\.git)?$/);
+  const repoMatch = repoUrl.match(/(?:^|\/|:)([^/]+)\/([^/]+?)(?:\.git)?$/);
   if (!repoMatch) {
     console.error(`❌ Invalid repository URL: ${repoUrl}`);
     process.exit(1);

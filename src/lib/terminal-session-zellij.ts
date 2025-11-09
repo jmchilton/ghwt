@@ -2,12 +2,10 @@ import { execa } from "execa";
 import { spawn } from "child_process";
 import { join } from "path";
 import { mkdirSync, writeFileSync, openSync } from "fs";
-import { tmpdir } from "os";
-import { randomUUID, createHash } from "crypto";
+import { createHash } from "crypto";
 import {
   TerminalSessionManager,
   SessionConfig,
-  WindowConfig,
   TemplateVars,
   substituteVariables,
 } from "./terminal-session-base.js";
@@ -66,7 +64,6 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     // Get user's default shell, fallback to bash
     const shell = process.env.SHELL || "/bin/bash";
-    const shellName = shell.split("/").pop() || "bash";
 
     for (let i = 0; i < config.windows.length; i++) {
       const window = config.windows[i];
@@ -241,7 +238,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
       ], {
         stdio: "inherit",
       });
-    } catch (error) {
+    } catch {
       // If wezterm is not available, fall back to direct zellij attach
       console.log(`📋 Attaching to session in current terminal...`);
       await execa("zellij", ["attach", shortenedName], {

@@ -1,7 +1,7 @@
 import { mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { execa } from "execa";
-import { expandPath, loadConfig, saveConfig } from "../lib/config.js";
+import { expandPath, saveConfig } from "../lib/config.js";
 import { GhwtConfig } from "../types.js";
 import { writeNote } from "../lib/obsidian.js";
 

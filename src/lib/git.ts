@@ -1,5 +1,4 @@
 import { execa } from "execa";
-import { join } from "path";
 
 export interface GitInfo {
   remoteUrl: string;

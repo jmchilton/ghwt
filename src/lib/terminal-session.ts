@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { load as loadYaml } from "js-yaml";
-import { expandPath, getTerminalSessionConfigDir } from "./config.js";
+import { getTerminalSessionConfigDir } from "./config.js";
 import { GhwtConfig } from "../types.js";
 import {
   SessionConfig,
@@ -143,7 +143,6 @@ export async function attachCommand(
     const ui = config.terminalUI || "wezterm";
     if (ui === "wezterm" && config.terminalMultiplexer !== "zellij") {
       // For tmux with wezterm UI: detach other clients before attaching
-      const tmuxManager = manager as TmuxSessionManager;
       const { execa } = await import("execa");
       try {
         await execa("tmux", ["detach-client", "-s", sessionName]);

@@ -2,7 +2,6 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { execa } from "execa";
 import { expandPath } from "./config.js";
-import { GitInfo } from "./git.js";
 import { WorktreeMetadata } from "../types.js";
 import { loadConfig } from "./config.js";
 
@@ -90,11 +89,12 @@ export async function fetchCIArtifacts(
 
   try {
     await execa("npx", args);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Exit code 2 = incomplete (workflows still in progress), which is OK
     // Exit code 1 = partial success (some artifacts failed)
     // Exit code 0 = complete success
-    if (error.exitCode !== 1 && error.exitCode !== 2) {
+    const exitCode = (error as { exitCode?: number }).exitCode;
+    if (exitCode !== 1 && exitCode !== 2) {
       if (options?.verbose) {
         console.log(`⚠️  CI artifact fetch failed: ${error}`);
       }
@@ -148,10 +148,7 @@ export async function parseCISummary(summaryPath: string): Promise<{
       failedTests,
       linterErrors,
     };
-  } catch (error) {
-    if (options?.verbose) {
-      console.log(`⚠️  Failed to parse CI summary: ${error}`);
-    }
+  } catch {
     return {
       status: "unknown",
       failedTests: 0,
@@ -162,8 +159,7 @@ export async function parseCISummary(summaryPath: string): Promise<{
 
 export async function getCIMetadata(
   artifactsPath: string,
-  currentSha: string,
-  options?: { verbose?: boolean }
+  currentSha: string
 ): Promise<Partial<WorktreeMetadata>> {
   const { readdirSync } = await import("fs");
   let actualSummaryPath = "";
@@ -213,6 +209,3 @@ export async function getCIMetadata(
     ci_head_sha: currentSha,
   };
 }
-
-// For backwards compat with potential external imports
-let options: { verbose?: boolean } | undefined;

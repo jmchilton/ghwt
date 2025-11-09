@@ -20,8 +20,6 @@ import { listWorktrees } from "../lib/worktree-list.js";
 import {
   findSessionConfig,
   loadSessionConfig,
-  killSession,
-  TerminalSessionManager,
 } from "../lib/terminal-session.js";
 import { TmuxSessionManager } from "../lib/terminal-session-tmux.js";
 import { ZellijSessionManager } from "../lib/terminal-session-zellij.js";
@@ -32,8 +30,6 @@ export async function syncCommand(
   options?: { verbose?: boolean }
 ): Promise<void> {
   const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
   const vaultRoot = expandPath(config.vaultPath);
   const ciArtifactsDir = getCiArtifactsDir(config);
 
@@ -67,7 +63,7 @@ export async function syncCommand(
 
     for (const noteFile of noteFiles) {
       const notePath = join(worktreesDir, noteFile);
-      const { frontmatter, body } = readNote(notePath);
+      const { frontmatter } = readNote(notePath);
 
       try {
         // Extract metadata
@@ -105,7 +101,7 @@ export async function syncCommand(
               const prNumber = prMatch[1];
               // Get repo context from worktree
               const repoUrl = gitInfo.remoteUrl;
-              const repoMatch = repoUrl.match(/[:\/]([^\/]+)\/(.+?)(?:\.git)?$/);
+              const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
               const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
               const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, "") : proj;
 
@@ -147,7 +143,7 @@ export async function syncCommand(
                   );
 
                   // Parse CI summary and update metadata
-                  const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha, options);
+                  const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
                   Object.assign(updates, ciMeta);
 
                   if (options?.verbose) {

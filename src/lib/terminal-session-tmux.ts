@@ -3,7 +3,6 @@ import { join } from "path";
 import {
   TerminalSessionManager,
   SessionConfig,
-  WindowConfig,
   TemplateVars,
   substituteVariables,
 } from "./terminal-session-base.js";
@@ -208,7 +207,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
       ], {
         stdio: "inherit",
       });
-    } catch (error) {
+    } catch {
       // If wezterm is not available, fall back to direct tmux attach
       console.log(`📋 Attaching to session in current terminal...`);
       await execa("tmux", ["attach-session", "-t", sessionName], {

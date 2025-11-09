@@ -1,5 +1,3 @@
-import { GhwtConfig } from "../types.js";
-
 export interface WindowConfig {
   name: string;
   root?: string;
