@@ -13,12 +13,12 @@ import {
 
 export class ZellijSessionManager implements TerminalSessionManager {
   /**
-   * Shorten session name for zellij (max 32 chars)
+   * Shorten session name for zellij (max ~25 chars to be safe)
    * Uses abbreviations: galaxy-architecture -> ga, feature/implement -> fi
    */
   private shortenSessionName(sessionName: string): string {
-    // Zellij has a ~32 char limit for session names
-    if (sessionName.length <= 32) {
+    // Zellij has a strict char limit for session names (be conservative with 25)
+    if (sessionName.length <= 25) {
       return sessionName;
     }
 
