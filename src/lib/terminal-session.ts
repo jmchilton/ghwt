@@ -120,13 +120,25 @@ export async function launchSession(
 }
 
 /**
+ * Options for attaching to session
+ */
+export interface AttachCommandOptions {
+  /**
+   * If true, reuse existing terminal/wezterm instance.
+   * If false (default), launch new wezterm process with --always-new-process.
+   */
+  existingTerminal?: boolean;
+}
+
+/**
  * Attach to existing worktree terminal session
  */
 export async function attachCommand(
   project: string,
   branch: string,
   worktreePath: string,
-  ghwtConfig?: GhwtConfig
+  ghwtConfig?: GhwtConfig,
+  attachOptions?: AttachCommandOptions,
 ): Promise<void> {
   const sessionName = `${project}-${branch.replace(/\//g, "-")}`;
   const config = ghwtConfig || { terminalMultiplexer: "tmux" } as GhwtConfig;
@@ -152,7 +164,9 @@ export async function attachCommand(
     }
 
     // Attach to session
-    await manager.attachToSession(sessionName, worktreePath);
+    await manager.attachToSession(sessionName, worktreePath, {
+      alwaysNewProcess: !attachOptions?.existingTerminal,
+    });
   } catch (error) {
     throw new Error(`Failed to attach to terminal session: ${error}`);
   }

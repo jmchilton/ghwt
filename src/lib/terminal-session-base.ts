@@ -11,6 +11,13 @@ export interface SessionConfig {
   windows: WindowConfig[];
 }
 
+export interface AttachOptions {
+  /**
+   * If true, reuse existing wezterm instance. If false, launch new process.
+   */
+  alwaysNewProcess?: boolean;
+}
+
 export interface TerminalSessionManager {
   /**
    * Check if session exists
@@ -34,7 +41,11 @@ export interface TerminalSessionManager {
   /**
    * Attach to existing session in terminal
    */
-  attachToSession(sessionName: string, worktreePath: string): Promise<void>;
+  attachToSession(
+    sessionName: string,
+    worktreePath: string,
+    options?: AttachOptions,
+  ): Promise<void>;
 
   /**
    * Kill session

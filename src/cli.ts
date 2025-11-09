@@ -92,10 +92,18 @@ program
 
 program
   .command("attach [project] [branch]")
-  .description("Attach to an existing worktree terminal session\nRun without args to pick from list, or with project to filter")
-  .action(async (project, branch) => {
+  .description(
+    "Attach to an existing worktree terminal session\nRun without args to pick from list, or with project to filter",
+  )
+  .option(
+    "--existing-terminal",
+    "Reuse existing terminal window instead of launching new wezterm process",
+  )
+  .action(async (project, branch, cmdOptions) => {
     try {
-      await attachCmd(project, branch);
+      await attachCmd(project, branch, {
+        existingTerminal: cmdOptions.existingTerminal,
+      });
     } catch (error) {
       console.error("Error:", error);
       process.exit(1);

@@ -4,6 +4,7 @@ import {
   TerminalSessionManager,
   SessionConfig,
   TemplateVars,
+  AttachOptions,
   substituteVariables,
 } from "./terminal-session-base.js";
 
@@ -176,7 +177,8 @@ export class TmuxSessionManager implements TerminalSessionManager {
    */
   async attachToSession(
     sessionName: string,
-    worktreePath: string
+    worktreePath: string,
+    options?: AttachOptions,
   ): Promise<void> {
     // Check if session exists
     const exists = await this.sessionExists(sessionName);
@@ -193,18 +195,28 @@ export class TmuxSessionManager implements TerminalSessionManager {
 
     // Launch wezterm attached to the tmux session
     try {
-      await execa("wezterm", [
+      const weztermArgs = [
         "start",
         "--workspace",
         sessionName,
         "--cwd",
         worktreePath,
+      ];
+
+      // Add --always-new-process unless --existing-terminal flag is set
+      if (options?.alwaysNewProcess !== false) {
+        weztermArgs.push("--always-new-process");
+      }
+
+      weztermArgs.push(
         "--",
         "tmux",
         "attach-session",
         "-t",
         sessionName,
-      ], {
+      );
+
+      await execa("wezterm", weztermArgs, {
         stdio: "inherit",
       });
     } catch {

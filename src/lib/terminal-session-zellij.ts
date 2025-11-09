@@ -7,6 +7,7 @@ import {
   TerminalSessionManager,
   SessionConfig,
   TemplateVars,
+  AttachOptions,
   substituteVariables,
 } from "./terminal-session-base.js";
 
@@ -214,7 +215,8 @@ export class ZellijSessionManager implements TerminalSessionManager {
    */
   async attachToSession(
     sessionName: string,
-    worktreePath: string
+    worktreePath: string,
+    options?: AttachOptions,
   ): Promise<void> {
     const shortenedName = this.shortenSessionName(sessionName);
 
@@ -225,17 +227,27 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     // Try to launch WezTerm with zellij attached
     try {
-      await execa("wezterm", [
+      const weztermArgs = [
         "start",
         "--workspace",
         shortenedName,
         "--cwd",
         worktreePath,
+      ];
+
+      // Add --always-new-process unless --existing-terminal flag is set
+      if (options?.alwaysNewProcess !== false) {
+        weztermArgs.push("--always-new-process");
+      }
+
+      weztermArgs.push(
         "--",
         "zellij",
         "attach",
         shortenedName,
-      ], {
+      );
+
+      await execa("wezterm", weztermArgs, {
         stdio: "inherit",
       });
     } catch {

@@ -1,10 +1,17 @@
 import { join } from "path";
 import { existsSync } from "fs";
 import { loadConfig, expandPath } from "../lib/config.js";
-import { attachCommand } from "../lib/terminal-session.js";
+import {
+  attachCommand,
+  type AttachCommandOptions,
+} from "../lib/terminal-session.js";
 import { pickWorktree } from "../lib/worktree-picker.js";
 
-export async function attachCmd(project?: string, branch?: string): Promise<void> {
+export async function attachCmd(
+  project?: string,
+  branch?: string,
+  options?: AttachCommandOptions,
+): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
 
@@ -29,7 +36,13 @@ export async function attachCmd(project?: string, branch?: string): Promise<void
   }
 
   try {
-    await attachCommand(selectedProject, selectedBranch, worktreePath, config);
+    await attachCommand(
+      selectedProject,
+      selectedBranch,
+      worktreePath,
+      config,
+      options,
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Failed to attach: ${message}`);
