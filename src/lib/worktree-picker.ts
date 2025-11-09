@@ -1,5 +1,5 @@
-import Enquirer from "enquirer";
-import { listWorktrees, WorktreeInfo } from "./worktree-list.js";
+import Enquirer from 'enquirer';
+import { listWorktrees, WorktreeInfo } from './worktree-list.js';
 
 export interface PickedWorktree {
   project: string;
@@ -14,7 +14,7 @@ export async function pickWorktree(filterProject?: string): Promise<PickedWorktr
   const worktrees = listWorktrees(filterProject);
 
   if (worktrees.length === 0) {
-    const filterText = filterProject ? ` in project '${filterProject}'` : "";
+    const filterText = filterProject ? ` in project '${filterProject}'` : '';
     console.error(`❌ No worktrees found${filterText}`);
     process.exit(1);
   }
@@ -39,16 +39,21 @@ export async function pickWorktree(filterProject?: string): Promise<PickedWorktr
 
   try {
     const answer = await enquirer.prompt({
-      type: "select",
-      name: "worktree",
-      message: filterProject ? `Select branch in ${filterProject}` : "Select worktree",
+      type: 'select',
+      name: 'worktree',
+      message: filterProject ? `Select branch in ${filterProject}` : 'Select worktree',
       choices,
     });
 
     const selected = answer.worktree;
 
     // Handle case where selected might be the value object or a string
-    if (typeof selected === "object" && selected !== null && "project" in selected && "branch" in selected) {
+    if (
+      typeof selected === 'object' &&
+      selected !== null &&
+      'project' in selected &&
+      'branch' in selected
+    ) {
       return {
         project: selected.project,
         branch: selected.branch,
@@ -66,8 +71,8 @@ export async function pickWorktree(filterProject?: string): Promise<PickedWorktr
 
     throw new Error(`Failed to parse selected worktree: ${selected}`);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Cancelled")) {
-      console.log("Cancelled.");
+    if (error instanceof Error && error.message.includes('Cancelled')) {
+      console.log('Cancelled.');
       process.exit(0);
     }
     throw error;

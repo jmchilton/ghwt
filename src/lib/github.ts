@@ -1,4 +1,4 @@
-import { execa } from "execa";
+import { execa } from 'execa';
 
 export interface PRInfo {
   number: number;
@@ -11,40 +11,37 @@ export interface PRInfo {
   headRefName: string;
 }
 
-export async function getPRInfo(
-  prNumber: number | string,
-  repo?: string
-): Promise<PRInfo> {
+export async function getPRInfo(prNumber: number | string, repo?: string): Promise<PRInfo> {
   const prNum = String(prNumber);
 
   try {
     const args = [
-      "pr",
-      "view",
+      'pr',
+      'view',
       prNum,
-      "--json",
-      "number,state,statusCheckRollup,reviews,labels,updatedAt,url,headRefName",
+      '--json',
+      'number,state,statusCheckRollup,reviews,labels,updatedAt,url,headRefName',
     ];
 
     if (repo) {
-      args.push("--repo", repo);
+      args.push('--repo', repo);
     }
 
-    const { stdout: prJson } = await execa("gh", args, {
+    const { stdout: prJson } = await execa('gh', args, {
       cwd: repo ? undefined : process.cwd(),
     });
 
     const prData = JSON.parse(prJson);
 
     // Determine checks status
-    let checksStatus = "unknown";
+    let checksStatus = 'unknown';
     if (prData.statusCheckRollup && prData.statusCheckRollup.length > 0) {
       const statuses = prData.statusCheckRollup.map(
-        (check: { conclusion: string }) => check.conclusion
+        (check: { conclusion: string }) => check.conclusion,
       );
-      if (statuses.includes("FAILURE")) checksStatus = "failing";
-      else if (statuses.includes("PENDING")) checksStatus = "pending";
-      else checksStatus = "passing";
+      if (statuses.includes('FAILURE')) checksStatus = 'failing';
+      else if (statuses.includes('PENDING')) checksStatus = 'pending';
+      else checksStatus = 'passing';
     }
 
     return {
@@ -65,18 +62,14 @@ export async function getPRInfo(
 export async function createPRFromBranch(
   branch: string,
   title?: string,
-  body?: string
+  body?: string,
 ): Promise<{ url: string; number: number }> {
   try {
-    const args = ["pr", "create", "--head", branch];
-    if (title) args.push("--title", title);
-    if (body) args.push("--body", body);
+    const args = ['pr', 'create', '--head', branch];
+    if (title) args.push('--title', title);
+    if (body) args.push('--body', body);
 
-    const { stdout: prJson } = await execa("gh", [
-      ...args,
-      "--json",
-      "url,number",
-    ]);
+    const { stdout: prJson } = await execa('gh', [...args, '--json', 'url,number']);
 
     const prData = JSON.parse(prJson);
     return { url: prData.url, number: prData.number };

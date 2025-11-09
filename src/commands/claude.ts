@@ -1,14 +1,14 @@
-import { join } from "path";
-import { existsSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath } from "../lib/config.js";
-import { pickWorktree } from "../lib/worktree-picker.js";
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath } from '../lib/config.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
 
 export async function claudeCommand(
   project?: string,
   branch?: string,
   prompt?: string,
-  options?: { continue?: boolean }
+  options?: { continue?: boolean },
 ): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
@@ -28,7 +28,7 @@ export async function claudeCommand(
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
 
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, "-")}`;
+  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, '-')}`;
   const worktreePath = join(worktreesRoot, worktreeName);
 
   // Check if worktree exists
@@ -40,7 +40,7 @@ export async function claudeCommand(
   try {
     const args: string[] = [];
     if (options?.continue) {
-      args.push("--continue");
+      args.push('--continue');
     }
     if (prompt) {
       args.push(prompt);
@@ -48,9 +48,9 @@ export async function claudeCommand(
 
     console.log(`🔍 Opening Claude in ${selectedProject}/${selectedBranch}`);
 
-    await execa("claude", args, {
+    await execa('claude', args, {
       cwd: worktreePath,
-      stdio: "inherit",
+      stdio: 'inherit',
     });
   } catch (error) {
     console.error(`❌ Failed to open Claude: ${error}`);

@@ -1,41 +1,38 @@
-import { join } from "path";
-import { existsSync, readdirSync, statSync, mkdirSync } from "fs";
-import { loadConfig, expandPath, getCiArtifactsDir } from "../lib/config.js";
-import { getGitInfo } from "../lib/git.js";
-import { getPRInfo } from "../lib/github.js";
+import { join } from 'path';
+import { existsSync, readdirSync, statSync, mkdirSync } from 'fs';
+import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
+import { getGitInfo } from '../lib/git.js';
+import { getPRInfo } from '../lib/github.js';
 import {
   readNote,
   updateNoteMetadata,
   calculateDaysSinceActivity,
   createWorktreeNote,
-} from "../lib/obsidian.js";
+} from '../lib/obsidian.js';
 import {
   shouldFetchArtifacts,
   needsFullFetch,
   fetchCIArtifacts,
   getCIMetadata,
   getCIArtifactsPath,
-} from "../lib/ci-artifacts.js";
-import { listWorktrees } from "../lib/worktree-list.js";
-import {
-  findSessionConfig,
-  loadSessionConfig,
-} from "../lib/terminal-session.js";
-import { TmuxSessionManager } from "../lib/terminal-session-tmux.js";
-import { ZellijSessionManager } from "../lib/terminal-session-zellij.js";
-import { WorktreeMetadata } from "../types.js";
+} from '../lib/ci-artifacts.js';
+import { listWorktrees } from '../lib/worktree-list.js';
+import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
+import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
+import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
+import { WorktreeMetadata } from '../types.js';
 
 export async function syncCommand(
   project?: string,
-  options?: { verbose?: boolean }
+  options?: { verbose?: boolean },
 ): Promise<void> {
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
   const ciArtifactsDir = getCiArtifactsDir(config);
 
-  const projectsPath = join(vaultRoot, "projects");
+  const projectsPath = join(vaultRoot, 'projects');
 
-  console.log("🔄 Syncing worktree metadata...\n");
+  console.log('🔄 Syncing worktree metadata...\n');
 
   let syncedCount = 0;
   let errorCount = 0;
@@ -43,12 +40,10 @@ export async function syncCommand(
   // Scan projects
   const projectDirs = project
     ? [project]
-    : readdirSync(projectsPath).filter((p) =>
-        statSync(join(projectsPath, p)).isDirectory()
-      );
+    : readdirSync(projectsPath).filter((p) => statSync(join(projectsPath, p)).isDirectory());
 
   for (const proj of projectDirs) {
-    const worktreesDir = join(projectsPath, proj, "worktrees");
+    const worktreesDir = join(projectsPath, proj, 'worktrees');
 
     if (!existsSync(worktreesDir)) {
       if (options?.verbose) {
@@ -57,9 +52,7 @@ export async function syncCommand(
       continue;
     }
 
-    const noteFiles = readdirSync(worktreesDir).filter((f) =>
-      f.endsWith(".md")
-    );
+    const noteFiles = readdirSync(worktreesDir).filter((f) => f.endsWith('.md'));
 
     for (const noteFile of noteFiles) {
       const notePath = join(worktreesDir, noteFile);
@@ -103,7 +96,7 @@ export async function syncCommand(
               const repoUrl = gitInfo.remoteUrl;
               const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
               const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
-              const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, "") : proj;
+              const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : proj;
 
               const prInfo = await getPRInfo(prNumber, ghRepo);
               updates.pr_state = prInfo.state;
@@ -115,11 +108,7 @@ export async function syncCommand(
               // Smart CI artifact fetching (only for PRs)
               if (frontmatter.pr && shouldFetchArtifacts(frontmatter, prInfo.checks)) {
                 try {
-                  const artifactsPath = getCIArtifactsPath(
-                    ciArtifactsDir,
-                    repoName,
-                    prNumber
-                  );
+                  const artifactsPath = getCIArtifactsPath(ciArtifactsDir, repoName, prNumber);
 
                   // Create directory if it doesn't exist
                   mkdirSync(artifactsPath, { recursive: true });
@@ -128,9 +117,7 @@ export async function syncCommand(
                   const resume = !needsFullFetch(frontmatter, gitInfo.currentSha);
 
                   if (options?.verbose) {
-                    console.log(
-                      `  📦 Fetching CI artifacts (${resume ? "resume" : "full"})...`
-                    );
+                    console.log(`  📦 Fetching CI artifacts (${resume ? 'resume' : 'full'})...`);
                   }
 
                   await fetchCIArtifacts(
@@ -139,7 +126,7 @@ export async function syncCommand(
                     artifactsPath,
                     resume,
                     repoName,
-                    options
+                    options,
                   );
 
                   // Parse CI summary and update metadata
@@ -148,7 +135,7 @@ export async function syncCommand(
 
                   if (options?.verbose) {
                     console.log(
-                      `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`
+                      `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
                     );
                   }
                 } catch (error) {
@@ -170,15 +157,13 @@ export async function syncCommand(
 
         if (options?.verbose) {
           console.log(
-            `✅ Synced: ${proj}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`
+            `✅ Synced: ${proj}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`,
           );
         }
 
         syncedCount++;
       } catch (error) {
-        console.error(
-          `❌ Error syncing ${proj}/${noteFile}: ${error}`
-        );
+        console.error(`❌ Error syncing ${proj}/${noteFile}: ${error}`);
         errorCount++;
       }
     }
@@ -190,8 +175,14 @@ export async function syncCommand(
   const allWorktrees = listWorktrees(project);
 
   for (const wt of allWorktrees) {
-    const notePath = join(vaultRoot, "projects", wt.project, "worktrees", wt.branch.replace(/\//g, "-") + ".md");
-    const sessionName = `${wt.project}-${wt.branch.replace(/\//g, "-")}`;
+    const notePath = join(
+      vaultRoot,
+      'projects',
+      wt.project,
+      'worktrees',
+      wt.branch.replace(/\//g, '-') + '.md',
+    );
+    const sessionName = `${wt.project}-${wt.branch.replace(/\//g, '-')}`;
 
     // If worktree exists but note doesn't, recreate it
     if (!existsSync(notePath)) {
@@ -202,8 +193,8 @@ export async function syncCommand(
         const metadata: Partial<WorktreeMetadata> = {
           project: wt.project,
           branch: wt.branch,
-          status: "in-progress",
-          created: new Date().toISOString().split("T")[0],
+          status: 'in-progress',
+          created: new Date().toISOString().split('T')[0],
           repo_url: gitInfo.remoteUrl,
           worktree_path: wt.path,
           base_branch: gitInfo.baseBranch,
@@ -231,9 +222,10 @@ export async function syncCommand(
     }
 
     // If worktree exists but session doesn't, recreate it
-    const manager = config.terminalMultiplexer === "zellij"
-      ? new ZellijSessionManager()
-      : new TmuxSessionManager();
+    const manager =
+      config.terminalMultiplexer === 'zellij'
+        ? new ZellijSessionManager()
+        : new TmuxSessionManager();
 
     const sessionExists = await manager.sessionExists(sessionName);
     if (!sessionExists) {
@@ -258,5 +250,7 @@ export async function syncCommand(
     }
   }
 
-  console.log(`\n📊 Sync complete: ${syncedCount} updated, ${recreatedCount} notes recreated, ${sessionRecreatedCount} sessions recreated, ${errorCount} errors`);
+  console.log(
+    `\n📊 Sync complete: ${syncedCount} updated, ${recreatedCount} notes recreated, ${sessionRecreatedCount} sessions recreated, ${errorCount} errors`,
+  );
 }

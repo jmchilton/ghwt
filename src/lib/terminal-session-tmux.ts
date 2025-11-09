@@ -1,12 +1,12 @@
-import { execa } from "execa";
-import { join } from "path";
+import { execa } from 'execa';
+import { join } from 'path';
 import {
   TerminalSessionManager,
   SessionConfig,
   TemplateVars,
   AttachOptions,
   substituteVariables,
-} from "./terminal-session-base.js";
+} from './terminal-session-base.js';
 
 export class TmuxSessionManager implements TerminalSessionManager {
   /**
@@ -14,12 +14,8 @@ export class TmuxSessionManager implements TerminalSessionManager {
    */
   async sessionExists(sessionName: string): Promise<boolean> {
     try {
-      const { stdout } = await execa("tmux", [
-        "list-sessions",
-        "-F",
-        "#{session_name}",
-      ]);
-      return stdout.split("\n").includes(sessionName);
+      const { stdout } = await execa('tmux', ['list-sessions', '-F', '#{session_name}']);
+      return stdout.split('\n').includes(sessionName);
     } catch {
       return false;
     }
@@ -31,7 +27,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
   async createSession(
     sessionName: string,
     config: SessionConfig,
-    worktreePath: string
+    worktreePath: string,
   ): Promise<void> {
     const sessionExists = await this.sessionExists(sessionName);
     if (sessionExists) {
@@ -41,62 +37,49 @@ export class TmuxSessionManager implements TerminalSessionManager {
 
     const vars: TemplateVars = {
       worktree_path: worktreePath,
-      project: sessionName.split("-")[0],
-      branch: sessionName.split("-").slice(1).join("-"),
+      project: sessionName.split('-')[0],
+      branch: sessionName.split('-').slice(1).join('-'),
     };
 
     // Create detached session in worktree directory
-    await execa("tmux", ["new-session", "-d", "-s", sessionName, "-c", worktreePath]);
+    await execa('tmux', ['new-session', '-d', '-s', sessionName, '-c', worktreePath]);
 
     // Run pre-commands in the first window (send them)
     if (config.pre && config.pre.length > 0) {
       for (const preCmd of config.pre) {
         const substituted = substituteVariables(preCmd, vars);
-        await execa("tmux", [
-          "send-keys",
-          "-t",
-          `${sessionName}:0`,
-          substituted,
-          "C-m",
-        ]);
+        await execa('tmux', ['send-keys', '-t', `${sessionName}:0`, substituted, 'C-m']);
       }
     }
 
     // Process windows (skip first window which was created with session)
     for (let i = 0; i < config.windows.length; i++) {
       const window = config.windows[i];
-      const windowRoot = window.root
-        ? join(worktreePath, window.root)
-        : worktreePath;
+      const windowRoot = window.root ? join(worktreePath, window.root) : worktreePath;
       const substitutedRoot = substituteVariables(windowRoot, vars);
 
       if (i === 0) {
         // Rename first window
-        await execa("tmux", [
-          "rename-window",
-          "-t",
-          `${sessionName}:0`,
-          window.name,
-        ]);
+        await execa('tmux', ['rename-window', '-t', `${sessionName}:0`, window.name]);
         // Change to specified directory if different from session root
         if (windowRoot !== worktreePath) {
-          await execa("tmux", [
-            "send-keys",
-            "-t",
+          await execa('tmux', [
+            'send-keys',
+            '-t',
             `${sessionName}:0`,
             `cd ${substitutedRoot}`,
-            "C-m",
+            'C-m',
           ]);
         }
       } else {
         // Create new window
-        await execa("tmux", [
-          "new-window",
-          "-t",
+        await execa('tmux', [
+          'new-window',
+          '-t',
           sessionName,
-          "-n",
+          '-n',
           window.name,
-          "-c",
+          '-c',
           substitutedRoot,
         ]);
       }
@@ -106,19 +89,8 @@ export class TmuxSessionManager implements TerminalSessionManager {
       for (let j = 0; j < panes.length; j++) {
         if (j > 0) {
           // Split window for additional panes
-          await execa("tmux", [
-            "split-window",
-            "-t",
-            `${sessionName}:${i}`,
-            "-c",
-            substitutedRoot,
-          ]);
-          await execa("tmux", [
-            "select-layout",
-            "-t",
-            `${sessionName}:${i}`,
-            "tiled",
-          ]);
+          await execa('tmux', ['split-window', '-t', `${sessionName}:${i}`, '-c', substitutedRoot]);
+          await execa('tmux', ['select-layout', '-t', `${sessionName}:${i}`, 'tiled']);
         }
 
         const cmd = panes[j];
@@ -128,29 +100,29 @@ export class TmuxSessionManager implements TerminalSessionManager {
           if (config.pre && config.pre.length > 0) {
             for (const preCmd of config.pre) {
               const substitutedPre = substituteVariables(preCmd, vars);
-              await execa("tmux", [
-                "send-keys",
-                "-t",
+              await execa('tmux', [
+                'send-keys',
+                '-t',
                 `${sessionName}:${i}.${j}`,
                 substitutedPre,
-                "C-m",
+                'C-m',
               ]);
             }
           }
           // Send actual command
-          await execa("tmux", [
-            "send-keys",
-            "-t",
+          await execa('tmux', [
+            'send-keys',
+            '-t',
             `${sessionName}:${i}.${j}`,
             substitutedCmd,
-            "C-m",
+            'C-m',
           ]);
         }
       }
     }
 
     // Select first window
-    await execa("tmux", ["select-window", "-t", `${sessionName}:0`]);
+    await execa('tmux', ['select-window', '-t', `${sessionName}:0`]);
   }
 
   /**
@@ -158,16 +130,16 @@ export class TmuxSessionManager implements TerminalSessionManager {
    */
   async launchUI(sessionName: string, worktreePath: string): Promise<void> {
     // Launch wezterm with workspace, starting in worktree, attached to tmux session
-    await execa("wezterm", [
-      "start",
-      "--workspace",
+    await execa('wezterm', [
+      'start',
+      '--workspace',
       sessionName,
-      "--cwd",
+      '--cwd',
       worktreePath,
-      "--",
-      "tmux",
-      "attach-session",
-      "-t",
+      '--',
+      'tmux',
+      'attach-session',
+      '-t',
       sessionName,
     ]);
   }
@@ -188,42 +160,30 @@ export class TmuxSessionManager implements TerminalSessionManager {
 
     // Detach any other clients from the session first
     try {
-      await execa("tmux", ["detach-client", "-s", sessionName]);
+      await execa('tmux', ['detach-client', '-s', sessionName]);
     } catch {
       // Session might not have other clients attached, that's fine
     }
 
     // Launch wezterm attached to the tmux session
     try {
-      const weztermArgs = [
-        "start",
-        "--workspace",
-        sessionName,
-        "--cwd",
-        worktreePath,
-      ];
+      const weztermArgs = ['start', '--workspace', sessionName, '--cwd', worktreePath];
 
       // Add --always-new-process unless --existing-terminal flag is set
       if (options?.alwaysNewProcess !== false) {
-        weztermArgs.push("--always-new-process");
+        weztermArgs.push('--always-new-process');
       }
 
-      weztermArgs.push(
-        "--",
-        "tmux",
-        "attach-session",
-        "-t",
-        sessionName,
-      );
+      weztermArgs.push('--', 'tmux', 'attach-session', '-t', sessionName);
 
-      await execa("wezterm", weztermArgs, {
-        stdio: "inherit",
+      await execa('wezterm', weztermArgs, {
+        stdio: 'inherit',
       });
     } catch {
       // If wezterm is not available, fall back to direct tmux attach
       console.log(`📋 Attaching to session in current terminal...`);
-      await execa("tmux", ["attach-session", "-t", sessionName], {
-        stdio: "inherit",
+      await execa('tmux', ['attach-session', '-t', sessionName], {
+        stdio: 'inherit',
       });
     }
   }
@@ -233,7 +193,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
    */
   async killSession(sessionName: string): Promise<void> {
     try {
-      await execa("tmux", ["kill-session", "-t", sessionName]);
+      await execa('tmux', ['kill-session', '-t', sessionName]);
     } catch {
       // Session doesn't exist, that's fine
     }

@@ -27,11 +27,7 @@ export interface TerminalSessionManager {
   /**
    * Create session with configured windows and panes
    */
-  createSession(
-    sessionName: string,
-    config: SessionConfig,
-    worktreePath: string
-  ): Promise<void>;
+  createSession(sessionName: string, config: SessionConfig, worktreePath: string): Promise<void>;
 
   /**
    * Launch terminal UI attached to session
@@ -62,13 +58,10 @@ export interface TemplateVars {
 /**
  * Substitute template variables in strings
  */
-export function substituteVariables(
-  text: string,
-  vars: TemplateVars
-): string {
+export function substituteVariables(text: string, vars: TemplateVars): string {
   let result = text;
   for (const [key, value] of Object.entries(vars)) {
-    result = result.replace(new RegExp(`{{${key}}}`, "g"), value);
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
   }
   return result;
 }

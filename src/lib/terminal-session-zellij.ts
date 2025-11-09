@@ -1,15 +1,15 @@
-import { execa } from "execa";
-import { spawn } from "child_process";
-import { join } from "path";
-import { mkdirSync, writeFileSync, openSync } from "fs";
-import { createHash } from "crypto";
+import { execa } from 'execa';
+import { spawn } from 'child_process';
+import { join } from 'path';
+import { mkdirSync, writeFileSync, openSync } from 'fs';
+import { createHash } from 'crypto';
 import {
   TerminalSessionManager,
   SessionConfig,
   TemplateVars,
   AttachOptions,
   substituteVariables,
-} from "./terminal-session-base.js";
+} from './terminal-session-base.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
   /**
@@ -23,19 +23,16 @@ export class ZellijSessionManager implements TerminalSessionManager {
     }
 
     // Try abbreviating: galaxy-architecture-feature-implement -> ga-fi
-    const parts = sessionName.split("-");
-    const abbreviated = parts.map((part) => part[0]).join("");
+    const parts = sessionName.split('-');
+    const abbreviated = parts.map((part) => part[0]).join('');
 
     if (abbreviated.length <= 32) {
       return abbreviated;
     }
 
     // Fall back to hash + keep project prefix
-    const hash = createHash("sha256")
-      .update(sessionName)
-      .digest("hex")
-      .substring(0, 8);
-    const project = parts[0] || "session";
+    const hash = createHash('sha256').update(sessionName).digest('hex').substring(0, 8);
+    const project = parts[0] || 'session';
     return `${project}-${hash}`;
   }
 
@@ -44,7 +41,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
    */
   async sessionExists(sessionName: string): Promise<boolean> {
     try {
-      const { stdout } = await execa("zellij", ["list-sessions"]);
+      const { stdout } = await execa('zellij', ['list-sessions']);
       const shortened = this.shortenSessionName(sessionName);
       return stdout.includes(shortened);
     } catch {
@@ -58,19 +55,17 @@ export class ZellijSessionManager implements TerminalSessionManager {
   private generateKdlLayout(
     config: SessionConfig,
     worktreePath: string,
-    vars: TemplateVars
+    vars: TemplateVars,
   ): string {
     const layout: string[] = [];
     layout.push('layout {');
 
     // Get user's default shell, fallback to bash
-    const shell = process.env.SHELL || "/bin/bash";
+    const shell = process.env.SHELL || '/bin/bash';
 
     for (let i = 0; i < config.windows.length; i++) {
       const window = config.windows[i];
-      const windowRoot = window.root
-        ? join(worktreePath, window.root)
-        : worktreePath;
+      const windowRoot = window.root ? join(worktreePath, window.root) : worktreePath;
       const substitutedRoot = substituteVariables(windowRoot, vars);
       const panes = window.panes || [];
 
@@ -137,7 +132,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
   async createSession(
     sessionName: string,
     config: SessionConfig,
-    worktreePath: string
+    worktreePath: string,
   ): Promise<void> {
     const shortenedName = this.shortenSessionName(sessionName);
 
@@ -149,34 +144,29 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     const vars: TemplateVars = {
       worktree_path: worktreePath,
-      project: sessionName.split("-")[0],
-      branch: sessionName.split("-").slice(1).join("-"),
+      project: sessionName.split('-')[0],
+      branch: sessionName.split('-').slice(1).join('-'),
     };
 
     // Generate KDL layout
     const kdlLayout = this.generateKdlLayout(config, worktreePath, vars);
 
     // Write layout to persistent cache directory (not /tmp which gets cleaned)
-    const layoutDir = join(worktreePath, ".zellij");
+    const layoutDir = join(worktreePath, '.zellij');
     mkdirSync(layoutDir, { recursive: true });
-    const layoutPath = join(layoutDir, "layout.kdl");
+    const layoutPath = join(layoutDir, 'layout.kdl');
     writeFileSync(layoutPath, kdlLayout);
 
     try {
       // Create session in background with layout (using spawn for detached mode)
       return new Promise((resolve, reject) => {
         // Open /dev/null to prevent zellij from trying to interact with terminal
-        const devNull = openSync("/dev/null", "r");
+        const devNull = openSync('/dev/null', 'r');
 
-        const proc = spawn("zellij", [
-          "-s",
-          shortenedName,
-          "-n",
-          layoutPath,
-        ], {
+        const proc = spawn('zellij', ['-s', shortenedName, '-n', layoutPath], {
           cwd: worktreePath,
           detached: true,
-          stdio: [devNull, "ignore", "ignore"],
+          stdio: [devNull, 'ignore', 'ignore'],
         });
 
         // Unref the process so parent can exit without waiting
@@ -188,7 +178,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
         // Don't log exit codes - zellij exits quickly even when successful
         // Session creation happens asynchronously in the background
-        proc.on("error", (error) => {
+        proc.on('error', (error) => {
           reject(new Error(`Failed to create zellij session: ${error}`));
         });
       });
@@ -204,9 +194,9 @@ export class ZellijSessionManager implements TerminalSessionManager {
     const shortenedName = this.shortenSessionName(sessionName);
 
     // Simply attach to the session - zellij will use its native UI
-    await execa("zellij", ["attach", shortenedName], {
+    await execa('zellij', ['attach', shortenedName], {
       cwd: worktreePath,
-      stdio: "inherit",
+      stdio: 'inherit',
     });
   }
 
@@ -227,35 +217,24 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     // Try to launch WezTerm with zellij attached
     try {
-      const weztermArgs = [
-        "start",
-        "--workspace",
-        shortenedName,
-        "--cwd",
-        worktreePath,
-      ];
+      const weztermArgs = ['start', '--workspace', shortenedName, '--cwd', worktreePath];
 
       // Add --always-new-process unless --existing-terminal flag is set
       if (options?.alwaysNewProcess !== false) {
-        weztermArgs.push("--always-new-process");
+        weztermArgs.push('--always-new-process');
       }
 
-      weztermArgs.push(
-        "--",
-        "zellij",
-        "attach",
-        shortenedName,
-      );
+      weztermArgs.push('--', 'zellij', 'attach', shortenedName);
 
-      await execa("wezterm", weztermArgs, {
-        stdio: "inherit",
+      await execa('wezterm', weztermArgs, {
+        stdio: 'inherit',
       });
     } catch {
       // If wezterm is not available, fall back to direct zellij attach
       console.log(`📋 Attaching to session in current terminal...`);
-      await execa("zellij", ["attach", shortenedName], {
+      await execa('zellij', ['attach', shortenedName], {
         cwd: worktreePath,
-        stdio: "inherit",
+        stdio: 'inherit',
       });
     }
   }
@@ -267,7 +246,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
     const shortenedName = this.shortenSessionName(sessionName);
 
     try {
-      await execa("zellij", ["delete-session", "-f", shortenedName]);
+      await execa('zellij', ['delete-session', '-f', shortenedName]);
     } catch {
       // Session doesn't exist, that's fine
     }

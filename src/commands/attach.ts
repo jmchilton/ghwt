@@ -1,11 +1,8 @@
-import { join } from "path";
-import { existsSync } from "fs";
-import { loadConfig, expandPath } from "../lib/config.js";
-import {
-  attachCommand,
-  type AttachCommandOptions,
-} from "../lib/terminal-session.js";
-import { pickWorktree } from "../lib/worktree-picker.js";
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { loadConfig, expandPath } from '../lib/config.js';
+import { attachCommand, type AttachCommandOptions } from '../lib/terminal-session.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
 
 export async function attachCmd(
   project?: string,
@@ -26,7 +23,7 @@ export async function attachCmd(
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
 
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, "-")}`;
+  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, '-')}`;
   const worktreePath = join(worktreesRoot, worktreeName);
 
   // Check if worktree exists
@@ -36,13 +33,7 @@ export async function attachCmd(
   }
 
   try {
-    await attachCommand(
-      selectedProject,
-      selectedBranch,
-      worktreePath,
-      config,
-      options,
-    );
+    await attachCommand(selectedProject, selectedBranch, worktreePath, config, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Failed to attach: ${message}`);

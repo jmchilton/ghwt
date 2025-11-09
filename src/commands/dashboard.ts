@@ -1,13 +1,13 @@
-import { join } from "path";
-import { existsSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath } from "../lib/config.js";
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath } from '../lib/config.js';
 
 export async function dashboardCommand(): Promise<void> {
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
 
-  const dashboardPath = join(vaultRoot, "dashboard.md");
+  const dashboardPath = join(vaultRoot, 'dashboard.md');
 
   // Check if dashboard exists
   if (!existsSync(dashboardPath)) {
@@ -19,7 +19,7 @@ export async function dashboardCommand(): Promise<void> {
   try {
     // Open dashboard in Obsidian
     const obsidianUrl = `obsidian://open?vault=projects&file=dashboard`;
-    await execa("open", [obsidianUrl]);
+    await execa('open', [obsidianUrl]);
     console.log(`📊 Opened dashboard in Obsidian`);
   } catch (error) {
     console.error(`❌ Failed to open Obsidian: ${error}`);

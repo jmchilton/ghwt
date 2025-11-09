@@ -1,8 +1,8 @@
-import { join } from "path";
-import { existsSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath } from "../lib/config.js";
-import { pickWorktree } from "../lib/worktree-picker.js";
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath } from '../lib/config.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
 
 export async function noteCommand(project?: string, branch?: string): Promise<void> {
   let selectedProject = project;
@@ -18,7 +18,13 @@ export async function noteCommand(project?: string, branch?: string): Promise<vo
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
 
-  const notePath = join(vaultRoot, "projects", selectedProject, "worktrees", selectedBranch.replace(/\//g, "-") + ".md");
+  const notePath = join(
+    vaultRoot,
+    'projects',
+    selectedProject,
+    'worktrees',
+    selectedBranch.replace(/\//g, '-') + '.md',
+  );
 
   // Check if note exists
   if (!existsSync(notePath)) {
@@ -28,8 +34,8 @@ export async function noteCommand(project?: string, branch?: string): Promise<vo
 
   try {
     // Construct obsidian:// URL
-    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${selectedProject}/worktrees/${selectedBranch.replace(/\//g, "-")}.md`;
-    await execa("open", [obsidianUrl]);
+    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${selectedProject}/worktrees/${selectedBranch.replace(/\//g, '-')}.md`;
+    await execa('open', [obsidianUrl]);
     console.log(`📖 Opened in Obsidian: ${notePath}`);
   } catch (error) {
     console.error(`❌ Failed to open Obsidian: ${error}`);
