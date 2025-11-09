@@ -272,12 +272,12 @@ When ghwt syncs or creates worktrees with failing PRs, it will automatically det
 
 Place `.ghwt-session.yaml`, `.ghwt-session.yml`, or `.ghwt-session.json` config files in:
 ```
-~/projects/terminal-session-config/<repo-name>/
+~/projects/terminal-session-config/
 ```
 
-Example for Galaxy:
+**Per-repository config:**
 ```yaml
-# ~/projects/terminal-session-config/galaxy/.ghwt-session.yaml
+# ~/projects/terminal-session-config/galaxy.ghwt-session.yaml
 name: galaxy
 root: "{{worktree_path}}"
 
@@ -296,6 +296,13 @@ windows:
 
   - name: test
     # Empty pane for interactive testing
+```
+
+**Default fallback config (optional):**
+If a repository doesn't have a specific config, ghwt will look for `_default.ghwt-session.yaml`:
+```yaml
+# ~/projects/terminal-session-config/_default.ghwt-session.yaml
+# Used for any repository without its own config file
 ```
 
 **Template variables** (substituted automatically):
@@ -417,7 +424,8 @@ src/
 
 - **Multiplexer abstraction**: Unified interface for tmux and zellij
 - **Multiple backends**: Tmux (default) or zellij via pluggable managers
-- **Per-repo configs**: YAML-based session templates in `terminal-session-config/<repo>/`
+- **Per-repo configs**: YAML-based session templates in `terminal-session-config/<repo>.ghwt-session.yaml`
+- **Default fallback**: If no repo config exists, uses `terminal-session-config/_default.ghwt-session.yaml`
 - **Unified config format**: Single YAML format compiles to appropriate multiplexer syntax
 - **Auto-virtualenv**: Pre-commands like `. .venv/bin/activate` run before pane startup
 - **Multiple windows**: Configure tabs for dev servers, testing, interactive shells

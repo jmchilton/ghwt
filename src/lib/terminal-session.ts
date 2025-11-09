@@ -17,21 +17,32 @@ export { TerminalSessionManager };
 
 /**
  * Find session config file for a project in terminal-session-config directory
- * Looks for .ghwt-session.yaml, .ghwt-session.yml, or .ghwt-session.json
+ * Looks for {repoName}.ghwt-session.yaml first, then falls back to _default.ghwt-session.yaml
  */
 export function findSessionConfig(repoName: string, config: GhwtConfig): string | null {
-  const configDir = join(
-    getTerminalSessionConfigDir(config),
-    repoName
-  );
+  const configDir = getTerminalSessionConfigDir(config);
 
-  const candidates = [
-    join(configDir, ".ghwt-session.yaml"),
-    join(configDir, ".ghwt-session.yml"),
-    join(configDir, ".ghwt-session.json"),
+  // Try repo-specific config first: terminal-session-config/{repoName}.ghwt-session.yaml
+  const repoCandidates = [
+    join(configDir, `${repoName}.ghwt-session.yaml`),
+    join(configDir, `${repoName}.ghwt-session.yml`),
+    join(configDir, `${repoName}.ghwt-session.json`),
   ];
 
-  for (const candidate of candidates) {
+  for (const candidate of repoCandidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  // Fall back to default config: terminal-session-config/_default.ghwt-session.yaml
+  const defaultCandidates = [
+    join(configDir, "_default.ghwt-session.yaml"),
+    join(configDir, "_default.ghwt-session.yml"),
+    join(configDir, "_default.ghwt-session.json"),
+  ];
+
+  for (const candidate of defaultCandidates) {
     if (existsSync(candidate)) {
       return candidate;
     }

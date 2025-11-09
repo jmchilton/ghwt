@@ -1,5 +1,6 @@
 # Example terminal session config for both tmux and zellij
-# Place in: ~/projects/terminal-session-config/<repo-name>/.ghwt-session.yaml
+# Place in: ~/projects/terminal-session-config/<repo-name>.ghwt-session.yaml
+# Or use _default.ghwt-session.yaml as a fallback for all repositories
 
 name: galaxy
 root: "{{worktree_path}}"
