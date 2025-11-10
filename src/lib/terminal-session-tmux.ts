@@ -6,6 +6,7 @@ import {
   TemplateVars,
   AttachOptions,
   substituteVariables,
+  normalizeSessionConfig,
 } from './terminal-session-base.js';
 
 export class TmuxSessionManager implements TerminalSessionManager {
@@ -22,7 +23,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
   }
 
   /**
-   * Create tmux session with configured windows and panes
+   * Create tmux session with configured tabs, windows and panes
    */
   async createSession(
     sessionName: string,
@@ -41,83 +42,107 @@ export class TmuxSessionManager implements TerminalSessionManager {
       branch: sessionName.split('-').slice(1).join('-'),
     };
 
+    // Normalize config to tabs format (handles backward compatibility)
+    const normalizedConfig = normalizeSessionConfig(config);
+
     // Create detached session in worktree directory
     await execa('tmux', ['new-session', '-d', '-s', sessionName, '-c', worktreePath]);
 
-    // Run pre-commands in the first window (send them)
-    if (config.pre && config.pre.length > 0) {
-      for (const preCmd of config.pre) {
-        const substituted = substituteVariables(preCmd, vars);
-        await execa('tmux', ['send-keys', '-t', `${sessionName}:0`, substituted, 'C-m']);
-      }
-    }
+    let globalWindowIndex = 0;
 
-    // Process windows (skip first window which was created with session)
-    for (let i = 0; i < config.windows.length; i++) {
-      const window = config.windows[i];
-      const windowRoot = window.root ? join(worktreePath, window.root) : worktreePath;
-      const substitutedRoot = substituteVariables(windowRoot, vars);
+    // Process tabs
+    for (const tab of normalizedConfig.tabs) {
+      // Process windows within this tab
+      for (let windowIndex = 0; windowIndex < tab.windows.length; windowIndex++) {
+        const window = tab.windows[windowIndex];
+        const windowRoot = window.root ? join(worktreePath, window.root) : worktreePath;
+        const substitutedRoot = substituteVariables(windowRoot, vars);
 
-      if (i === 0) {
-        // Rename first window
-        await execa('tmux', ['rename-window', '-t', `${sessionName}:0`, window.name]);
-        // Change to specified directory if different from session root
-        if (windowRoot !== worktreePath) {
+        // Create window name with tab prefix: {tab-name}:{window-name}
+        const prefixedWindowName = `${tab.name}:${window.name}`;
+
+        if (globalWindowIndex === 0) {
+          // Rename first window (created with session)
+          await execa('tmux', ['rename-window', '-t', `${sessionName}:0`, prefixedWindowName]);
+          // Change to specified directory if different from session root
+          if (windowRoot !== worktreePath) {
+            await execa('tmux', [
+              'send-keys',
+              '-t',
+              `${sessionName}:0`,
+              `cd ${substitutedRoot}`,
+              'C-m',
+            ]);
+          }
+        } else {
+          // Create new window
           await execa('tmux', [
-            'send-keys',
+            'new-window',
             '-t',
-            `${sessionName}:0`,
-            `cd ${substitutedRoot}`,
-            'C-m',
+            sessionName,
+            '-n',
+            prefixedWindowName,
+            '-c',
+            substitutedRoot,
           ]);
         }
-      } else {
-        // Create new window
-        await execa('tmux', [
-          'new-window',
-          '-t',
-          sessionName,
-          '-n',
-          window.name,
-          '-c',
-          substitutedRoot,
-        ]);
-      }
 
-      // Create panes and send commands
-      const panes = window.panes || [];
-      for (let j = 0; j < panes.length; j++) {
-        if (j > 0) {
-          // Split window for additional panes
-          await execa('tmux', ['split-window', '-t', `${sessionName}:${i}`, '-c', substitutedRoot]);
-          await execa('tmux', ['select-layout', '-t', `${sessionName}:${i}`, 'tiled']);
-        }
+        // Create panes and send commands
+        const panes = window.panes || [];
+        for (let paneIndex = 0; paneIndex < panes.length; paneIndex++) {
+          if (paneIndex > 0) {
+            // Split window for additional panes
+            await execa('tmux', [
+              'split-window',
+              '-t',
+              `${sessionName}:${globalWindowIndex}`,
+              '-c',
+              substitutedRoot,
+            ]);
+            await execa('tmux', [
+              'select-layout',
+              '-t',
+              `${sessionName}:${globalWindowIndex}`,
+              'tiled',
+            ]);
+          }
 
-        const cmd = panes[j];
-        if (cmd) {
-          const substitutedCmd = substituteVariables(cmd, vars);
-          // Re-run pre commands in each pane (for venv activation, etc.)
-          if (config.pre && config.pre.length > 0) {
-            for (const preCmd of config.pre) {
+          const cmd = panes[paneIndex];
+          const paneTarget = `${sessionName}:${globalWindowIndex}.${paneIndex}`;
+
+          // Run cascading pre-commands: session → tab → window → pane command
+          // 1. Session-level pre commands
+          if (normalizedConfig.pre && normalizedConfig.pre.length > 0) {
+            for (const preCmd of normalizedConfig.pre) {
               const substitutedPre = substituteVariables(preCmd, vars);
-              await execa('tmux', [
-                'send-keys',
-                '-t',
-                `${sessionName}:${i}.${j}`,
-                substitutedPre,
-                'C-m',
-              ]);
+              await execa('tmux', ['send-keys', '-t', paneTarget, substitutedPre, 'C-m']);
             }
           }
-          // Send actual command
-          await execa('tmux', [
-            'send-keys',
-            '-t',
-            `${sessionName}:${i}.${j}`,
-            substitutedCmd,
-            'C-m',
-          ]);
+
+          // 2. Tab-level pre commands
+          if (tab.pre && tab.pre.length > 0) {
+            for (const preCmd of tab.pre) {
+              const substitutedPre = substituteVariables(preCmd, vars);
+              await execa('tmux', ['send-keys', '-t', paneTarget, substitutedPre, 'C-m']);
+            }
+          }
+
+          // 3. Window-level pre commands
+          if (window.pre && window.pre.length > 0) {
+            for (const preCmd of window.pre) {
+              const substitutedPre = substituteVariables(preCmd, vars);
+              await execa('tmux', ['send-keys', '-t', paneTarget, substitutedPre, 'C-m']);
+            }
+          }
+
+          // 4. Send actual pane command
+          if (cmd) {
+            const substitutedCmd = substituteVariables(cmd, vars);
+            await execa('tmux', ['send-keys', '-t', paneTarget, substitutedCmd, 'C-m']);
+          }
         }
+
+        globalWindowIndex++;
       }
     }
 

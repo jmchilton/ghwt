@@ -3,12 +3,12 @@ import { join } from 'path';
 import { load as loadYaml } from 'js-yaml';
 import { getTerminalSessionConfigDir } from './config.js';
 import { GhwtConfig } from '../types.js';
-import { SessionConfig, WindowConfig, TerminalSessionManager } from './terminal-session-base.js';
+import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager } from './terminal-session-base.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';
 import { ZellijSessionManager } from './terminal-session-zellij.js';
 
 // Re-export for compatibility
-export type { SessionConfig, WindowConfig };
+export type { SessionConfig, WindowConfig, TabConfig };
 export { TerminalSessionManager };
 
 /**

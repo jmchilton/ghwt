@@ -5,27 +5,62 @@
 name: galaxy
 root: "{{worktree_path}}"
 
-# Pre-commands run before each pane (useful for virtualenv activation, etc.)
+# Session-level pre-commands run before each pane (useful for virtualenv activation, etc.)
 pre:
   - "[ -f .venv/bin/activate ] && source .venv/bin/activate"
 
-# Windows/tabs configuration
-windows:
-  - name: client
-    root: client
-    panes:
-      - npm run dev
-      - npm run lint
+# Tabs configuration (new format)
+# Each tab can have its own pre-commands and contains windows
+tabs:
+  - name: development
+    # Tab-level pre-commands (run before panes in this tab)
+    pre:
+      - "export NODE_ENV=development"
+    windows:
+      - name: client
+        root: client
+        # Window-level pre-commands (run before panes in this window)
+        pre:
+          - "cd client"
+        panes:
+          - npm run dev
+          - npm run lint
+      
+      - name: server
+        pre:
+          - "cd server"
+        panes:
+          - make run
+          - make test
+  
+  - name: testing
+    # Tab-level pre-commands for testing tab
+    pre:
+      - "export TEST_MODE=true"
+    windows:
+      - name: unit-tests
+        panes:
+          - npm test
+      
+      - name: e2e-tests
+        panes:
+          - npm run test:e2e
+  
+  - name: monitoring
+    windows:
+      - name: logs
+        root: .
+        panes:
+          - tail -f server.log
+      
+      - name: shell
+        # Empty pane for interactive use
 
-  - name: server
-    panes:
-      - make run
-      - make test
-
-  - name: shell
-    # Empty pane for interactive use
-
-  - name: logs
-    root: .
-    panes:
-      - tail -f server.log
+# Legacy format (still supported for backward compatibility):
+# If 'tabs' is not provided, 'windows' will be converted to a single default tab
+# windows:
+#   - name: client
+#     root: client
+#     panes:
+#       - npm run dev
+#       - npm run lint
