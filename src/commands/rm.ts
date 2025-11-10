@@ -1,9 +1,9 @@
-import { join } from "path";
-import { existsSync, rmSync, mkdirSync, cpSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath } from "../lib/config.js";
-import { killSession } from "../lib/terminal-session.js";
-import { pickWorktree } from "../lib/worktree-picker.js";
+import { join } from 'path';
+import { existsSync, rmSync, mkdirSync, cpSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath } from '../lib/config.js';
+import { killSession } from '../lib/terminal-session.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
 
 export async function rmCommand(project?: string, branch?: string): Promise<void> {
   // Show picker if project or branch not specified
@@ -20,16 +20,16 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
   const vaultRoot = expandPath(config.vaultPath);
 
   const repoPath = join(reposRoot, project);
-  const worktreeName = `${project}-${branch.replace(/\//g, "-")}`;
+  const worktreeName = `${project}-${branch.replace(/\//g, '-')}`;
   const worktreePath = join(worktreesRoot, worktreeName);
-  const noteDir = join(vaultRoot, "projects", project, "worktrees");
-  const notePath = join(noteDir, branch.replace(/\//g, "-") + ".md");
-  const archiveDir = join(projectsRoot, "old");
+  const noteDir = join(vaultRoot, 'projects', project, 'worktrees');
+  const notePath = join(noteDir, branch.replace(/\//g, '-') + '.md');
+  const archiveDir = join(projectsRoot, 'old');
 
   console.log(`🗑️  Removing worktree: ${branch}`);
 
   // Kill session if it exists
-  const sessionName = `${project}-${branch.replace(/\//g, "-")}`;
+  const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
   try {
     await killSession(sessionName, config);
     console.log(`✅ Killed terminal session: ${sessionName}`);
@@ -53,7 +53,7 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
 
   // Prune repository
   try {
-    await execa("git", ["worktree", "prune"], { cwd: repoPath });
+    await execa('git', ['worktree', 'prune'], { cwd: repoPath });
     console.log(`✅ Pruned repository`);
   } catch (error) {
     console.error(`⚠️  Failed to prune repository: ${error}`);
@@ -68,7 +68,7 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
       mkdirSync(archiveDir, { recursive: true });
 
       // Copy note to archive
-      const archiveNotePath = join(archiveDir, `${project}-${branch.replace(/\//g, "-")}.md`);
+      const archiveNotePath = join(archiveDir, `${project}-${branch.replace(/\//g, '-')}.md`);
       cpSync(notePath, archiveNotePath);
 
       // Delete original note

@@ -1,18 +1,18 @@
-import { join } from "path";
-import { existsSync, mkdirSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath, getCiArtifactsDir } from "../lib/config.js";
-import { getGitInfo, isBareRepository, branchExists } from "../lib/git.js";
-import { getPRInfo } from "../lib/github.js";
-import { createWorktreeNote } from "../lib/obsidian.js";
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
+import { getGitInfo, isBareRepository, branchExists } from '../lib/git.js';
+import { getPRInfo } from '../lib/github.js';
+import { createWorktreeNote } from '../lib/obsidian.js';
 import {
   shouldFetchArtifacts,
   fetchCIArtifacts,
   getCIMetadata,
   getCIArtifactsPath,
-} from "../lib/ci-artifacts.js";
-import { launchSession } from "../lib/terminal-session.js";
-import { WorktreeMetadata } from "../types.js";
+} from '../lib/ci-artifacts.js';
+import { launchSession } from '../lib/terminal-session.js';
+import { WorktreeMetadata } from '../types.js';
 
 export async function createCommand(project: string, branchArg: string): Promise<void> {
   const config = loadConfig();
@@ -23,10 +23,10 @@ export async function createCommand(project: string, branchArg: string): Promise
   const ciArtifactsDir = getCiArtifactsDir(config);
 
   const repoPath = join(reposRoot, project);
-  const worktreeName = `${project}-${branchArg.replace(/\//g, "-")}`;
+  const worktreeName = `${project}-${branchArg.replace(/\//g, '-')}`;
   const worktreePath = join(worktreesRoot, worktreeName);
-  const noteDir = join(vaultRoot, "projects", project, "worktrees");
-  const notePath = join(noteDir, branchArg.replace(/\//g, "-") + ".md");
+  const noteDir = join(vaultRoot, 'projects', project, 'worktrees');
+  const notePath = join(noteDir, branchArg.replace(/\//g, '-') + '.md');
 
   // Check repo exists
   if (!existsSync(repoPath)) {
@@ -37,17 +37,17 @@ export async function createCommand(project: string, branchArg: string): Promise
   console.log(`🔹 Repository: ${repoPath}`);
 
   // Determine branch
-  let branch = "";
-  let prUrl = "";
+  let branch = '';
+  let prUrl = '';
   let prInfo: { headRefName: string; url: string; checks?: string } | null = null;
 
-  if (branchArg.startsWith("feature/") || branchArg.startsWith("bug/")) {
+  if (branchArg.startsWith('feature/') || branchArg.startsWith('bug/')) {
     branch = branchArg;
-  } else if (branchArg.startsWith("pr/")) {
+  } else if (branchArg.startsWith('pr/')) {
     const prNumber = branchArg.slice(3);
     try {
       // Get repo URL to pass to gh CLI
-      const { stdout: repoUrl } = await execa("git", ["remote", "get-url", "origin"], {
+      const { stdout: repoUrl } = await execa('git', ['remote', 'get-url', 'origin'], {
         cwd: repoPath,
       });
       // Extract owner/repo from URL (e.g., git@github.com:galaxyproject/galaxy.git -> galaxyproject/galaxy)
@@ -63,9 +63,7 @@ export async function createCommand(project: string, branchArg: string): Promise
       process.exit(1);
     }
   } else {
-    console.error(
-      "❌ Unknown branch prefix. Use feature/, bug/, or pr/"
-    );
+    console.error('❌ Unknown branch prefix. Use feature/, bug/, or pr/');
     process.exit(1);
   }
 
@@ -78,23 +76,23 @@ export async function createCommand(project: string, branchArg: string): Promise
     const isBare = await isBareRepository(repoPath);
 
     if (isBare) {
-      await execa("git", ["clone", repoPath, worktreePath]);
+      await execa('git', ['clone', repoPath, worktreePath]);
       const branchExists_ = await branchExists(repoPath, branch);
       if (branchExists_) {
-        await execa("git", ["checkout", branch], { cwd: worktreePath });
+        await execa('git', ['checkout', branch], { cwd: worktreePath });
       } else {
-        await execa("git", ["checkout", "-b", branch], {
+        await execa('git', ['checkout', '-b', branch], {
           cwd: worktreePath,
         });
       }
     } else {
       const branchExists_ = await branchExists(repoPath, branch);
       if (branchExists_) {
-        await execa("git", ["worktree", "add", worktreePath, branch], {
+        await execa('git', ['worktree', 'add', worktreePath, branch], {
           cwd: repoPath,
         });
       } else {
-        await execa("git", ["worktree", "add", "-b", branch, worktreePath], {
+        await execa('git', ['worktree', 'add', '-b', branch, worktreePath], {
           cwd: repoPath,
         });
       }
@@ -111,8 +109,8 @@ export async function createCommand(project: string, branchArg: string): Promise
     project,
     branch,
     pr: prUrl || undefined,
-    status: "in-progress",
-    created: new Date().toISOString().split("T")[0],
+    status: 'in-progress',
+    created: new Date().toISOString().split('T')[0],
     repo_url: gitInfo.remoteUrl,
     worktree_path: worktreePath,
     base_branch: gitInfo.baseBranch,
@@ -129,25 +127,21 @@ export async function createCommand(project: string, branchArg: string): Promise
       const prNumber = branchArg.slice(3); // Remove "pr/" prefix
       const repoUrl = gitInfo.remoteUrl;
       const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-      const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2].replace(/\.git$/, "")}` : project;
-      const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, "") : project;
+      const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2].replace(/\.git$/, '')}` : project;
+      const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : project;
 
-      const artifactsPath = getCIArtifactsPath(
-        ciArtifactsDir,
-        repoName,
-        prNumber
-      );
+      const artifactsPath = getCIArtifactsPath(ciArtifactsDir, repoName, prNumber);
 
       mkdirSync(artifactsPath, { recursive: true });
 
-      console.log("📦 Fetching CI artifacts for failing PR...");
+      console.log('📦 Fetching CI artifacts for failing PR...');
       await fetchCIArtifacts(prNumber, ghRepo, artifactsPath, false, repoName);
 
       const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
       Object.assign(metadata, ciMeta);
 
       console.log(
-        `✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`
+        `✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
       );
     } catch (error) {
       console.log(`⚠️  Failed to fetch CI artifacts: ${error}`);
@@ -158,23 +152,23 @@ export async function createCommand(project: string, branchArg: string): Promise
   console.log(`🪶 Note created: ${notePath}`);
 
   // Open tools
-  const codeAvailable = await commandExists("code");
-  const obsidianAvailable = await commandExists("open");
+  const codeAvailable = await commandExists('code');
+  const obsidianAvailable = await commandExists('open');
 
   if (codeAvailable) {
     try {
-      await execa("code", [worktreePath]);
-      console.log("💻 Opened in VS Code");
+      await execa('code', [worktreePath]);
+      console.log('💻 Opened in VS Code');
     } catch {
       // Silently fail if opening fails
     }
   }
 
   if (obsidianAvailable) {
-    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${project}/worktrees/${branchArg.replace(/\//g, "-")}.md`;
+    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${project}/worktrees/${branchArg.replace(/\//g, '-')}.md`;
     try {
-      await execa("open", [obsidianUrl]);
-      console.log("📖 Opened in Obsidian");
+      await execa('open', [obsidianUrl]);
+      console.log('📖 Opened in Obsidian');
     } catch {
       // Silently fail if opening fails
     }
@@ -183,19 +177,19 @@ export async function createCommand(project: string, branchArg: string): Promise
   // Launch terminal session if config exists
   try {
     await launchSession(project, branch, worktreePath, config);
-    console.log("🖥️  Terminal session launched");
+    console.log('🖥️  Terminal session launched');
   } catch {
     console.log(`⚠️  Terminal session not configured`);
   }
 
-  console.log("\n✅ Done!");
+  console.log('\n✅ Done!');
   console.log(`📂 Worktree: ${worktreePath}`);
   console.log(`🪶 Note: ${notePath}`);
 }
 
 async function commandExists(cmd: string): Promise<boolean> {
   try {
-    await execa(cmd, ["--version"]);
+    await execa(cmd, ['--version']);
     return true;
   } catch {
     return false;

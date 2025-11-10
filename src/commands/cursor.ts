@@ -4,12 +4,7 @@ import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 
-export async function claudeCommand(
-  project?: string,
-  branch?: string,
-  prompt?: string,
-  options?: { continue?: boolean },
-): Promise<void> {
+export async function cursorCommand(project?: string, branch?: string): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
 
@@ -38,22 +33,11 @@ export async function claudeCommand(
   }
 
   try {
-    const args: string[] = [];
-    if (options?.continue) {
-      args.push('--continue');
-    }
-    if (prompt) {
-      args.push(prompt);
-    }
-
-    console.log(`🔍 Opening Claude in ${selectedProject}/${selectedBranch}`);
-
-    await execa('claude', args, {
-      cwd: worktreePath,
-      stdio: 'inherit',
-    });
+    await execa('cursor', [worktreePath]);
+    console.log(`💻 Opened in Cursor: ${worktreePath}`);
   } catch (error) {
-    console.error(`❌ Failed to open Claude: ${error}`);
+    console.error(`❌ Failed to open Cursor: ${error}`);
     process.exit(1);
   }
 }
+

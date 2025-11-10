@@ -32,6 +32,7 @@ ghwt init --vault-path ~/my-obsidian-vault
 ```
 
 Creates:
+
 - `~/projects/repositories/` - Bare git repos
 - `~/projects/worktrees/` - Active development directories
 - Dashboard template in Obsidian vault
@@ -55,6 +56,7 @@ ghwt clone https://github.com/galaxyproject/galaxy pr/1234
 Clones repository as bare repository in `~/projects/repositories/<name>/`
 
 **Options:**
+
 - `[branch]` - Optional: creates worktree immediately (format: feature/<name>, bug/<name>, or pr/<number>)
 - `--upstream <url>` - Optional: adds upstream remote (useful for forks with origin as your fork)
 
@@ -67,6 +69,7 @@ ghwt create galaxy pr/1234
 ```
 
 Automatically:
+
 - Creates/checks out branch
 - Generates Obsidian note with metadata
 - Opens VS Code + Obsidian
@@ -80,6 +83,7 @@ ghwt sync --verbose          # See detailed output
 ```
 
 Updates:
+
 - Commits ahead/behind
 - Uncommitted changes
 - PR state, CI status, reviews
@@ -87,10 +91,12 @@ Updates:
 - CI artifacts (for failing PRs)
 
 **Recreates missing items:**
+
 - **Notes**: If a worktree exists but its note was deleted, sync recreates it with fresh metadata
 - **Terminal Sessions**: If a worktree's tmux session is missing (crashed, killed, etc.), sync recreates it from the session config
 
 Example output:
+
 ```
 📊 Sync complete: 3 updated, 1 note recreated, 2 sessions recreated, 0 errors
 ```
@@ -103,6 +109,7 @@ ghwt rm galaxy pr/1234
 ```
 
 Automatically:
+
 - Deletes worktree directory
 - Prunes git worktree registry
 - Archives Obsidian note to `~/projects/old/`
@@ -121,6 +128,7 @@ ghwt attach galaxy feature/new-feature
 ```
 
 **Features:**
+
 - Multiple tabs/panes per worktree (dev server, tests, interactive shell)
 - Auto-virtualenv activation (`.venv/bin/activate`)
 - Persistent sessions (tmux or zellij, reattachable anytime)
@@ -145,6 +153,7 @@ ghwt claude galaxy feature/new-feature "help me fix this bug"
 ```
 
 **Features:**
+
 - Independent conversation history per worktree (automatic via directory scoping)
 - Resume previous conversations with `--continue` flag
 - Optional prompt on startup
@@ -188,6 +197,7 @@ ghwt dashboard                     # → Opens Obsidian dashboard
 ```
 
 **Worktree Picker:**
+
 - Interactive menu with arrow key navigation
 - Type to search/filter options
 - Smart prefiltering when project provided
@@ -247,6 +257,7 @@ Edit `~/.ghwtrc.json`:
 ```
 
 **Terminal Configuration Options:**
+
 - `terminalMultiplexer`: `"tmux"` (default) or `"zellij"` - Which multiplexer to use for sessions
 - `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions
   - `"wezterm"`: Launch WezTerm with multiplexer inside (modern UI)
@@ -257,11 +268,13 @@ Edit `~/.ghwtrc.json`:
 ### CI Artifacts Configuration
 
 Place `.gh-ci-artifacts.yaml`, `.gh-ci-artifacts.yml`, or `.gh-ci-artifacts.json` config files in:
+
 ```
 ~/projects/ci-artifacts-config/<repo-name>/
 ```
 
 Example for Galaxy:
+
 ```
 ~/projects/ci-artifacts-config/galaxy/.gh-ci-artifacts.yaml
 ```
@@ -271,18 +284,20 @@ When ghwt syncs or creates worktrees with failing PRs, it will automatically det
 ### Terminal Session Configuration
 
 Place `.ghwt-session.yaml`, `.ghwt-session.yml`, or `.ghwt-session.json` config files in:
+
 ```
 ~/projects/terminal-session-config/
 ```
 
 **Per-repository config:**
+
 ```yaml
 # ~/projects/terminal-session-config/galaxy.ghwt-session.yaml
 name: galaxy
-root: "{{worktree_path}}"
+root: '{{worktree_path}}'
 
 pre:
-  - "[ -f .venv/bin/activate ] && source .venv/bin/activate"
+  - '[ -f .venv/bin/activate ] && source .venv/bin/activate'
 
 windows:
   - name: client
@@ -300,23 +315,27 @@ windows:
 
 **Default fallback config (optional):**
 If a repository doesn't have a specific config, ghwt will look for `_default.ghwt-session.yaml`:
+
 ```yaml
 # ~/projects/terminal-session-config/_default.ghwt-session.yaml
 # Used for any repository without its own config file
 ```
 
 **Template variables** (substituted automatically):
+
 - `{{worktree_path}}` - Full path to worktree
 - `{{project}}` - Project name (e.g., "galaxy")
 - `{{branch}}` - Branch name (without slashes)
 
 **Sections:**
+
 - `name` - Session name (prefixed with project-branch)
 - `root` - Session root directory (default: worktree_path)
 - `pre` - Commands to run before each pane (useful for venv activation)
 - `windows` - List of windows/tabs with panes and startup commands
 
 **Format & Multiplexer Support:**
+
 - Single unified format works with both tmux and zellij
 - Windows and panes are automatically compiled to the appropriate multiplexer syntax
 - Pre-commands run before each pane (for virtualenv activation, etc.)
@@ -327,18 +346,21 @@ If a repository doesn't have a specific config, ghwt will look for `_default.ghw
 Each worktree note tracks:
 
 **Git Info**
+
 - `repo_url` - GitHub repository URL
 - `commits_ahead` / `commits_behind` - Relative to base branch
 - `has_uncommitted_changes` - Boolean flag
 - `last_commit_date` - Most recent commit timestamp
 
 **GitHub Info** (when linked to PR)
+
 - `pr_state` - open/closed/merged/draft
 - `pr_checks` - passing/failing/pending
 - `pr_reviews` - Number of reviews
 - `pr_labels` - GitHub labels
 
 **CI Artifacts** (auto-fetched for failing PRs)
+
 - `ci_status` - complete/partial/incomplete (workflow status)
 - `ci_failed_tests` - Count of test failures
 - `ci_linter_errors` - Count of linter errors
@@ -348,6 +370,7 @@ Each worktree note tracks:
 - `ci_last_synced` - Last CI artifacts sync timestamp
 
 **Activity Tracking**
+
 - `days_since_activity` - Auto-calculated staleness
 - `last_synced` - Last metadata sync timestamp
 
@@ -356,6 +379,7 @@ Each worktree note tracks:
 The init command creates `dashboard.md` with Dataview queries:
 
 **Active Work**
+
 ```dataview
 TABLE project, branch, status, commits_ahead, pr_checks
 FROM "projects"
@@ -364,6 +388,7 @@ SORT created DESC
 ```
 
 **Needs Attention**
+
 ```dataview
 TABLE project, branch, pr_checks, commits_ahead, days_since_activity
 FROM "projects"
@@ -372,6 +397,7 @@ SORT days_since_activity DESC
 ```
 
 **CI Failures**
+
 ```dataview
 TABLE project, branch, ci_status, ci_failed_tests, ci_linter_errors
 FROM "projects"
@@ -457,12 +483,14 @@ src/
 ## Dependencies
 
 **NPM packages:**
+
 - `commander` - CLI framework
 - `js-yaml` - YAML/JSON config parsing
 - `execa` - Shell command execution
 - `enquirer` - Interactive CLI prompts (worktree picker)
 
 **External tools (must be installed):**
+
 - `git` and `gh` CLI - Git and GitHub operations
 - `claude` - Claude Code CLI (for opening Claude sessions)
 - `gh-ci-artifacts` - CI artifact downloads (installed on demand via npx)

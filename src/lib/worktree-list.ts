@@ -1,6 +1,6 @@
-import { join } from "path";
-import { readdirSync, existsSync } from "fs";
-import { loadConfig, expandPath } from "./config.js";
+import { join } from 'path';
+import { readdirSync, existsSync } from 'fs';
+import { loadConfig, expandPath } from './config.js';
 
 export interface WorktreeInfo {
   project: string;
@@ -16,7 +16,7 @@ export function listWorktrees(filterProject?: string): WorktreeInfo[] {
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
-  const repositoriesRoot = join(projectsRoot, config.repositoriesDir || "repositories");
+  const repositoriesRoot = join(projectsRoot, config.repositoriesDir || 'repositories');
 
   if (!existsSync(worktreesRoot)) {
     return [];
@@ -27,8 +27,8 @@ export function listWorktrees(filterProject?: string): WorktreeInfo[] {
   if (existsSync(repositoriesRoot)) {
     try {
       projectNames = readdirSync(repositoriesRoot, { withFileTypes: true })
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name)
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
         .sort((a, b) => b.length - a.length); // Sort by length descending for longest match
     } catch (error) {
       console.error(`Failed to list repositories: ${error}`);
@@ -44,25 +44,25 @@ export function listWorktrees(filterProject?: string): WorktreeInfo[] {
       if (!entry.isDirectory()) continue;
 
       // Parse worktree name by matching against known project names
-      let project = "";
-      let branch = "";
+      let project = '';
+      let branch = '';
 
       // Find matching project name (use longest match to handle "galaxy" vs "galaxy-architecture")
       for (const projectName of projectNames) {
-        if (entry.name.startsWith(projectName + "-")) {
+        if (entry.name.startsWith(projectName + '-')) {
           project = projectName;
           const remainder = entry.name.slice(projectName.length + 1); // +1 for the hyphen
-          branch = remainder.replace(/-/g, "/"); // Convert hyphens back to slashes
+          branch = remainder.replace(/-/g, '/'); // Convert hyphens back to slashes
           break;
         }
       }
 
       // Fallback if project not found in repositories
       if (!project) {
-        const parts = entry.name.split("-");
+        const parts = entry.name.split('-');
         if (parts.length < 2) continue;
         project = parts[0];
-        branch = parts.slice(1).join("/");
+        branch = parts.slice(1).join('/');
       }
 
       // Apply project filter if provided

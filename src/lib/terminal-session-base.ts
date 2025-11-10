@@ -1,14 +1,22 @@
 export interface WindowConfig {
   name: string;
   root?: string;
+  pre?: string[];
   panes?: string[];
+}
+
+export interface TabConfig {
+  name: string;
+  pre?: string[];
+  windows: WindowConfig[];
 }
 
 export interface SessionConfig {
   name: string;
   root?: string;
   pre?: string[];
-  windows: WindowConfig[];
+  tabs?: TabConfig[];
+  windows?: WindowConfig[];
 }
 
 export interface AttachOptions {
@@ -27,11 +35,7 @@ export interface TerminalSessionManager {
   /**
    * Create session with configured windows and panes
    */
-  createSession(
-    sessionName: string,
-    config: SessionConfig,
-    worktreePath: string
-  ): Promise<void>;
+  createSession(sessionName: string, config: SessionConfig, worktreePath: string): Promise<void>;
 
   /**
    * Launch terminal UI attached to session
@@ -62,13 +66,35 @@ export interface TemplateVars {
 /**
  * Substitute template variables in strings
  */
-export function substituteVariables(
-  text: string,
-  vars: TemplateVars
-): string {
+export function substituteVariables(text: string, vars: TemplateVars): string {
   let result = text;
   for (const [key, value] of Object.entries(vars)) {
-    result = result.replace(new RegExp(`{{${key}}}`, "g"), value);
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
   }
   return result;
+}
+
+/**
+ * Normalize session config to always have tabs structure
+ * Converts legacy windows-only config to tabs format for backward compatibility
+ */
+export function normalizeSessionConfig(config: SessionConfig): SessionConfig & { tabs: TabConfig[] } {
+  // If tabs already exist, use them
+  if (config.tabs && config.tabs.length > 0) {
+    return config as SessionConfig & { tabs: TabConfig[] };
+  }
+
+  // Convert legacy windows format to tabs format
+  const windows = config.windows || [];
+  const tabs: TabConfig[] = [
+    {
+      name: 'default',
+      windows: windows,
+    },
+  ];
+
+  return {
+    ...config,
+    tabs,
+  };
 }

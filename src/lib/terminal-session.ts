@@ -1,18 +1,14 @@
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-import { load as loadYaml } from "js-yaml";
-import { getTerminalSessionConfigDir } from "./config.js";
-import { GhwtConfig } from "../types.js";
-import {
-  SessionConfig,
-  WindowConfig,
-  TerminalSessionManager,
-} from "./terminal-session-base.js";
-import { TmuxSessionManager } from "./terminal-session-tmux.js";
-import { ZellijSessionManager } from "./terminal-session-zellij.js";
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { load as loadYaml } from 'js-yaml';
+import { getTerminalSessionConfigDir } from './config.js';
+import { GhwtConfig } from '../types.js';
+import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager } from './terminal-session-base.js';
+import { TmuxSessionManager } from './terminal-session-tmux.js';
+import { ZellijSessionManager } from './terminal-session-zellij.js';
 
 // Re-export for compatibility
-export type { SessionConfig, WindowConfig };
+export type { SessionConfig, WindowConfig, TabConfig };
 export { TerminalSessionManager };
 
 /**
@@ -37,9 +33,9 @@ export function findSessionConfig(repoName: string, config: GhwtConfig): string 
 
   // Fall back to default config: terminal-session-config/_default.ghwt-session.yaml
   const defaultCandidates = [
-    join(configDir, "_default.ghwt-session.yaml"),
-    join(configDir, "_default.ghwt-session.yml"),
-    join(configDir, "_default.ghwt-session.json"),
+    join(configDir, '_default.ghwt-session.yaml'),
+    join(configDir, '_default.ghwt-session.yml'),
+    join(configDir, '_default.ghwt-session.json'),
   ];
 
   for (const candidate of defaultCandidates) {
@@ -55,9 +51,9 @@ export function findSessionConfig(repoName: string, config: GhwtConfig): string 
  * Load and parse session config from YAML or JSON file
  */
 export function loadSessionConfig(configPath: string): SessionConfig {
-  const content = readFileSync(configPath, "utf-8");
+  const content = readFileSync(configPath, 'utf-8');
 
-  if (configPath.endsWith(".json")) {
+  if (configPath.endsWith('.json')) {
     return JSON.parse(content) as SessionConfig;
   } else {
     return loadYaml(content) as SessionConfig;
@@ -68,9 +64,9 @@ export function loadSessionConfig(configPath: string): SessionConfig {
  * Get appropriate session manager based on config
  */
 function getSessionManager(config: GhwtConfig): TerminalSessionManager {
-  const multiplexer = config.terminalMultiplexer || "tmux";
+  const multiplexer = config.terminalMultiplexer || 'tmux';
 
-  if (multiplexer === "zellij") {
+  if (multiplexer === 'zellij') {
     return new ZellijSessionManager();
   } else {
     return new TmuxSessionManager();
@@ -85,7 +81,7 @@ export async function launchSession(
   project: string,
   branch: string,
   worktreePath: string,
-  ghwtConfig: GhwtConfig
+  ghwtConfig: GhwtConfig,
 ): Promise<void> {
   const configPath = findSessionConfig(project, ghwtConfig);
   if (!configPath) {
@@ -94,7 +90,7 @@ export async function launchSession(
   }
 
   const config = loadSessionConfig(configPath);
-  const sessionName = `${project}-${branch.replace(/\//g, "-")}`;
+  const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
   const manager = getSessionManager(ghwtConfig);
 
   try {
@@ -103,20 +99,14 @@ export async function launchSession(
     console.log(`⚙️  Terminal session created: ${sessionName}`);
 
     // Launch UI based on config
-    const ui = ghwtConfig.terminalUI || "wezterm";
-    if (ui === "wezterm") {
+    const ui = ghwtConfig.terminalUI || 'wezterm';
+    if (ui === 'wezterm') {
       // For tmux: launch wezterm which wraps tmux
       // For zellij: launch wezterm which wraps zellij
-      if (ghwtConfig.terminalMultiplexer === "zellij") {
+      if (ghwtConfig.terminalMultiplexer === 'zellij') {
         // Zellij already running, open in wezterm
-        const { execa } = await import("execa");
-        await execa("wezterm", [
-          "start",
-          "--workspace",
-          sessionName,
-          "--cwd",
-          worktreePath,
-        ]);
+        const { execa } = await import('execa');
+        await execa('wezterm', ['start', '--workspace', sessionName, '--cwd', worktreePath]);
       } else {
         // Tmux: use existing launchUI which launches wezterm
         await manager.launchUI(sessionName, worktreePath);
@@ -151,8 +141,8 @@ export async function attachCommand(
   ghwtConfig?: GhwtConfig,
   attachOptions?: AttachCommandOptions,
 ): Promise<void> {
-  const sessionName = `${project}-${branch.replace(/\//g, "-")}`;
-  const config = ghwtConfig || { terminalMultiplexer: "tmux" } as GhwtConfig;
+  const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
+  const config = ghwtConfig || ({ terminalMultiplexer: 'tmux' } as GhwtConfig);
   const manager = getSessionManager(config);
 
   try {
@@ -163,12 +153,12 @@ export async function attachCommand(
     }
 
     // Handle WezTerm UI mode for tmux (detach other clients first)
-    const ui = config.terminalUI || "wezterm";
-    if (ui === "wezterm" && config.terminalMultiplexer !== "zellij") {
+    const ui = config.terminalUI || 'wezterm';
+    if (ui === 'wezterm' && config.terminalMultiplexer !== 'zellij') {
       // For tmux with wezterm UI: detach other clients before attaching
-      const { execa } = await import("execa");
+      const { execa } = await import('execa');
       try {
-        await execa("tmux", ["detach-client", "-s", sessionName]);
+        await execa('tmux', ['detach-client', '-s', sessionName]);
       } catch {
         // No other clients attached
       }
@@ -187,7 +177,7 @@ export async function attachCommand(
  * Kill terminal session
  */
 export async function killSession(sessionName: string, ghwtConfig?: GhwtConfig): Promise<void> {
-  const config = ghwtConfig || { terminalMultiplexer: "tmux" } as GhwtConfig;
+  const config = ghwtConfig || ({ terminalMultiplexer: 'tmux' } as GhwtConfig);
   const manager = getSessionManager(config);
 
   try {
@@ -206,24 +196,18 @@ export async function tmuxSessionExists(sessionName: string): Promise<boolean> {
 export async function createTmuxSession(
   sessionName: string,
   config: SessionConfig,
-  worktreePath: string
+  worktreePath: string,
 ): Promise<void> {
   const manager = new TmuxSessionManager();
   return manager.createSession(sessionName, config, worktreePath);
 }
 
-export async function launchWezterm(
-  sessionName: string,
-  worktreePath: string
-): Promise<void> {
+export async function launchWezterm(sessionName: string, worktreePath: string): Promise<void> {
   const manager = new TmuxSessionManager();
   return manager.launchUI(sessionName, worktreePath);
 }
 
-export async function attachToSession(
-  sessionName: string,
-  worktreePath: string
-): Promise<void> {
+export async function attachToSession(sessionName: string, worktreePath: string): Promise<void> {
   const manager = new TmuxSessionManager();
   return manager.attachToSession(sessionName, worktreePath);
 }

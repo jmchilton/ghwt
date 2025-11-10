@@ -1,14 +1,8 @@
-import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  mkdirSync,
-  statSync,
-} from "fs";
-import { dirname } from "path";
-import YAML from "js-yaml";
-import { NoteFrontmatter, WorktreeMetadata } from "../types.js";
-import { loadConfig } from "./config.js";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'fs';
+import { dirname } from 'path';
+import YAML from 'js-yaml';
+import { NoteFrontmatter, WorktreeMetadata } from '../types.js';
+import { loadConfig } from './config.js';
 
 export interface NoteContent {
   frontmatter: NoteFrontmatter;
@@ -46,18 +40,14 @@ export function serializeFrontmatter(frontmatter: NoteFrontmatter): string {
 
 export function readNote(notePath: string): NoteContent {
   if (!existsSync(notePath)) {
-    return { frontmatter: {}, body: "" };
+    return { frontmatter: {}, body: '' };
   }
 
-  const content = readFileSync(notePath, "utf-8");
+  const content = readFileSync(notePath, 'utf-8');
   return parseFrontmatter(content);
 }
 
-export function writeNote(
-  notePath: string,
-  frontmatter: NoteFrontmatter,
-  body: string
-): void {
+export function writeNote(notePath: string, frontmatter: NoteFrontmatter, body: string): void {
   const dir = dirname(notePath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -66,27 +56,22 @@ export function writeNote(
   const frontmatterStr = serializeFrontmatter(frontmatter);
   const content = `${frontmatterStr}\n\n${body}`;
 
-  writeFileSync(notePath, content, "utf-8");
+  writeFileSync(notePath, content, 'utf-8');
 }
 
-export function createWorktreeNote(
-  notePath: string,
-  metadata: Partial<WorktreeMetadata>
-): void {
-
+export function createWorktreeNote(notePath: string, metadata: Partial<WorktreeMetadata>): void {
   const frontmatter: NoteFrontmatter = {
     project: metadata.project,
     branch: metadata.branch,
     pr: metadata.pr || null,
-    status: metadata.status || "in-progress",
-    created: metadata.created || new Date().toISOString().split("T")[0],
+    status: metadata.status || 'in-progress',
+    created: metadata.created || new Date().toISOString().split('T')[0],
     repo_url: metadata.repo_url,
     worktree_path: metadata.worktree_path,
     base_branch: metadata.base_branch,
     commits_ahead: metadata.commits_ahead || 0,
     commits_behind: metadata.commits_behind || 0,
-    has_uncommitted_changes:
-      metadata.has_uncommitted_changes || false,
+    has_uncommitted_changes: metadata.has_uncommitted_changes || false,
     last_commit_date: metadata.last_commit_date,
     tracking_branch: metadata.tracking_branch || null,
     ...(metadata.ci_status && {
@@ -106,18 +91,18 @@ export function createWorktreeNote(
 - [View Results](${metadata.ci_viewer_url})
 
 `
-    : "";
+    : '';
 
   // Generate quick action links using Obsidian shell commands URI
-  let quickActionsSection = "## Quick Actions\n\n";
+  let quickActionsSection = '## Quick Actions\n\n';
 
   try {
     const config = loadConfig();
     if (config.obsidianVaultName && config.shellCommandExecuteId) {
       const vault = encodeURIComponent(config.obsidianVaultName);
       const executeId = encodeURIComponent(config.shellCommandExecuteId);
-      const project = encodeURIComponent(metadata.project || "");
-      const worktree = encodeURIComponent(metadata.branch || "");
+      const project = encodeURIComponent(metadata.project || '');
+      const worktree = encodeURIComponent(metadata.branch || '');
 
       quickActionsSection += `[📝 Open Code](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=code&_project=${project}&_worktree=${worktree})\n`;
       quickActionsSection += `[📄 Open Note](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=note&_project=${project}&_worktree=${worktree})\n`;
@@ -140,7 +125,7 @@ Worktree created for **${metadata.branch}** in project **${metadata.project}**
 ## Links
 - [Open in VS Code](vscode://file/${metadata.worktree_path})
 - \`${metadata.worktree_path}\` (copy path)
-${metadata.pr ? `- [PR link](${metadata.pr})` : ""}
+${metadata.pr ? `- [PR link](${metadata.pr})` : ''}
 
 ${ciSection}## Notes
 `;
@@ -148,10 +133,7 @@ ${ciSection}## Notes
   writeNote(notePath, frontmatter, body);
 }
 
-export function updateNoteMetadata(
-  notePath: string,
-  updates: Partial<WorktreeMetadata>
-): void {
+export function updateNoteMetadata(notePath: string, updates: Partial<WorktreeMetadata>): void {
   const { frontmatter, body } = readNote(notePath);
 
   // Merge updates with existing frontmatter, preserving user-added fields

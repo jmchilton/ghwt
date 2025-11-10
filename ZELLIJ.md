@@ -23,16 +23,19 @@ ghwt create galaxy feature/new-feature
 ## Configuration Options
 
 ### `terminalMultiplexer`
+
 - `"tmux"` (default) - Use tmux as session backend
 - `"zellij"` - Use zellij as session backend
 
 ### `terminalUI`
+
 - `"wezterm"` (default) - Wrap multiplexer in WezTerm window
 - `"none"` - Launch multiplexer directly with native UI
 
 ## Example Configurations
 
 ### Direct Zellij (Native UI)
+
 ```json
 {
   "terminalMultiplexer": "zellij",
@@ -41,6 +44,7 @@ ghwt create galaxy feature/new-feature
 ```
 
 ### Zellij in WezTerm
+
 ```json
 {
   "terminalMultiplexer": "zellij",
@@ -49,6 +53,7 @@ ghwt create galaxy feature/new-feature
 ```
 
 ### Tmux in WezTerm (Default)
+
 ```json
 {
   "terminalMultiplexer": "tmux",
@@ -57,6 +62,7 @@ ghwt create galaxy feature/new-feature
 ```
 
 ### Raw Tmux
+
 ```json
 {
   "terminalMultiplexer": "tmux",
@@ -72,10 +78,10 @@ Example: `~/projects/terminal-session-config/galaxy/.ghwt-session.yaml`
 
 ```yaml
 name: galaxy
-root: "{{worktree_path}}"
+root: '{{worktree_path}}'
 
 pre:
-  - "[ -f .venv/bin/activate ] && source .venv/bin/activate"
+  - '[ -f .venv/bin/activate ] && source .venv/bin/activate'
 
 windows:
   - name: client
@@ -103,7 +109,9 @@ windows:
 ## Keybindings
 
 ### Zellij (Native UI)
+
 Default zellij keybindings apply:
+
 - `Ctrl+g` - Toggle compact mode / default mode
 - `Ctrl+p` - Enter command mode
 - `Ctrl+[` - Enter scroll mode
@@ -112,11 +120,13 @@ Default zellij keybindings apply:
 See [zellij docs](https://zellij.dev) for full keybinding guide.
 
 ### Tmux (via WezTerm)
+
 WezTerm and tmux keybindings both work. Tmux leader key is `Ctrl+b` by default.
 
 ## Architecture
 
 ### Multiplexer Abstraction Layer
+
 All multiplexer-specific code is isolated in backend implementations:
 
 - `TerminalSessionManager` - Abstract interface
@@ -134,16 +144,19 @@ All multiplexer-specific code is isolated in backend implementations:
 ## Troubleshooting
 
 ### "Session not found" errors
+
 - Confirm zellij is installed: `zellij --version`
 - Check config: `cat ~/.ghwtrc.json`
 - List sessions: `zellij list-sessions`
 
 ### Panes not running commands
+
 - Check pre-command syntax in session config
 - Verify virtualenv path exists
 - Test commands manually in shell first
 
 ### UI not launching
+
 - If `terminalUI: "wezterm"`, confirm wezterm is installed
 - If `terminalUI: "none"`, zellij/tmux UI should launch directly
 - Check terminal output for error messages

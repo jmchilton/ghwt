@@ -1,8 +1,8 @@
-import { join } from "path";
-import { existsSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath } from "../lib/config.js";
-import { pickWorktree } from "../lib/worktree-picker.js";
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath } from '../lib/config.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
 
 export async function codeCommand(project?: string, branch?: string): Promise<void> {
   let selectedProject = project;
@@ -23,7 +23,7 @@ export async function codeCommand(project?: string, branch?: string): Promise<vo
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
 
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, "-")}`;
+  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, '-')}`;
   const worktreePath = join(worktreesRoot, worktreeName);
 
   // Check if worktree exists
@@ -33,7 +33,7 @@ export async function codeCommand(project?: string, branch?: string): Promise<vo
   }
 
   try {
-    await execa("code", [worktreePath]);
+    await execa('code', [worktreePath]);
     console.log(`💻 Opened in VS Code: ${worktreePath}`);
   } catch (error) {
     console.error(`❌ Failed to open VS Code: ${error}`);

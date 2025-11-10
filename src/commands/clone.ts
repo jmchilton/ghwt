@@ -1,13 +1,13 @@
-import { join } from "path";
-import { existsSync } from "fs";
-import { execa } from "execa";
-import { loadConfig, expandPath } from "../lib/config.js";
-import { createCommand } from "./create.js";
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { execa } from 'execa';
+import { loadConfig, expandPath } from '../lib/config.js';
+import { createCommand } from './create.js';
 
 export async function cloneCommand(
   repoUrl: string,
   branchArg?: string,
-  upstreamUrl?: string
+  upstreamUrl?: string,
 ): Promise<void> {
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
@@ -35,7 +35,7 @@ export async function cloneCommand(
 
   try {
     // Clone as bare repository
-    await execa("git", ["clone", "--bare", repoUrl, targetPath]);
+    await execa('git', ['clone', '--bare', repoUrl, targetPath]);
     console.log(`✅ Repository cloned successfully`);
     console.log(`📂 Path: ${targetPath}`);
   } catch (error) {
@@ -46,13 +46,13 @@ export async function cloneCommand(
   // Add upstream remote if provided
   if (upstreamUrl) {
     try {
-      await execa("git", ["remote", "add", "upstream", upstreamUrl], {
+      await execa('git', ['remote', 'add', 'upstream', upstreamUrl], {
         cwd: targetPath,
       });
       console.log(`✅ Added upstream remote: ${upstreamUrl}`);
 
       // Fetch from upstream
-      await execa("git", ["fetch", "upstream"], {
+      await execa('git', ['fetch', 'upstream'], {
         cwd: targetPath,
       });
       console.log(`✅ Fetched from upstream`);

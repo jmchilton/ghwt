@@ -7,8 +7,8 @@ export interface GhwtConfig {
   defaultBaseBranch: string;
   obsidianVaultName?: string;
   shellCommandExecuteId?: string;
-  terminalMultiplexer?: "tmux" | "zellij";
-  terminalUI?: "wezterm" | "none";
+  terminalMultiplexer?: 'tmux' | 'zellij';
+  terminalUI?: 'wezterm' | 'none';
 }
 
 export interface WorktreeMetadata {
@@ -30,7 +30,7 @@ export interface WorktreeMetadata {
   pr_updated_at?: string;
 
   // CI Artifacts
-  ci_status?: "complete" | "partial" | "incomplete";
+  ci_status?: 'complete' | 'partial' | 'incomplete';
   ci_failed_tests?: number;
   ci_linter_errors?: number;
   ci_artifacts_path?: string;
@@ -46,7 +46,7 @@ export interface WorktreeMetadata {
   project: string;
   branch: string;
   pr?: string;
-  status: "draft" | "in-progress" | "testing" | "review" | "blocked" | "merged";
+  status: 'draft' | 'in-progress' | 'testing' | 'review' | 'blocked' | 'merged';
   created: string;
 }
 
