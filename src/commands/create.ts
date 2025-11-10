@@ -43,6 +43,9 @@ export async function createCommand(project: string, branchArg: string): Promise
 
   if (branchArg.startsWith('feature/') || branchArg.startsWith('bug/')) {
     branch = branchArg;
+  } else if (branchArg.startsWith('branch/')) {
+    // Extract branch name without prefix for git operations
+    branch = branchArg.slice(7); // Remove "branch/" prefix
   } else if (branchArg.startsWith('pr/')) {
     const prNumber = branchArg.slice(3);
     try {
@@ -63,7 +66,7 @@ export async function createCommand(project: string, branchArg: string): Promise
       process.exit(1);
     }
   } else {
-    console.error('❌ Unknown branch prefix. Use feature/, bug/, or pr/');
+    console.error('❌ Unknown branch prefix. Use feature/, bug/, branch/, or pr/');
     process.exit(1);
   }
 
