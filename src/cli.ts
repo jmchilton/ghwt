@@ -11,6 +11,7 @@ import { codeCommand } from './commands/code.js';
 import { noteCommand } from './commands/note.js';
 import { ghCommand } from './commands/gh.js';
 import { claudeCommand } from './commands/claude.js';
+import { cursorCommand } from './commands/cursor.js';
 import { dashboardCommand } from './commands/dashboard.js';
 
 const program = new Command();
@@ -162,6 +163,20 @@ program
     try {
       const promptStr = prompt && prompt.length > 0 ? prompt.join(' ') : undefined;
       await claudeCommand(project, branch, promptStr, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('cursor [project] [branch]')
+  .description(
+    'Open worktree in Cursor IDE\nRun without args to pick from list, or with project to filter',
+  )
+  .action(async (project, branch) => {
+    try {
+      await cursorCommand(project, branch);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
