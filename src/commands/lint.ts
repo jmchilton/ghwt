@@ -175,6 +175,83 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
   }
 
   // =========================================================================
+  // 5. CI Artifact Configs Validation
+  // =========================================================================
+  try {
+    const config = loadConfig();
+    const projectsRoot = expandPath(config.projectsRoot);
+    const ciConfigDir = join(projectsRoot, 'ci-artifacts-config');
+
+    if (!existsSync(ciConfigDir)) {
+      result.warnings.push(`CI config directory not found: ${ciConfigDir}`);
+    } else {
+      // Import gh-ci-artifacts validation
+      let configSchema;
+      try {
+        const ghci = await import('gh-ci-artifacts');
+        configSchema = ghci.configSchema;
+      } catch (importError) {
+        result.errors.push(
+          `Failed to load gh-ci-artifacts for CI config validation. ` +
+          `Install it with: npm install gh-ci-artifacts`,
+        );
+        configSchema = null;
+      }
+
+      if (configSchema) {
+        // Find all project subdirectories
+        const projectDirs = readdirSync(ciConfigDir)
+          .filter((name) => statSync(join(ciConfigDir, name)).isDirectory());
+
+        let totalConfigs = 0;
+        let validConfigs = 0;
+
+        for (const projDir of projectDirs) {
+          const configCandidates = [
+            join(ciConfigDir, projDir, '.gh-ci-artifacts.yaml'),
+            join(ciConfigDir, projDir, '.gh-ci-artifacts.yml'),
+            join(ciConfigDir, projDir, '.gh-ci-artifacts.json'),
+          ];
+
+          for (const configPath of configCandidates) {
+            if (existsSync(configPath)) {
+              totalConfigs++;
+              try {
+                const content = readFileSync(configPath, 'utf-8');
+                const parsed = configPath.endsWith('.json') ? JSON.parse(content) : loadYaml(content);
+
+                const validation = configSchema.safeParse(parsed);
+                if (validation.success) {
+                  validConfigs++;
+                } else {
+                  const details = validation.error.issues
+                    .map((issue) => {
+                      const pathStr = issue.path.map(String).join('.');
+                      return `    ${pathStr}: ${issue.message}`;
+                    })
+                    .join('\n');
+                  result.errors.push(`CI config ${projDir}/.gh-ci-artifacts.* is invalid:\n${details}`);
+                }
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                result.errors.push(`Failed to parse CI config ${projDir}: ${message}`);
+              }
+              break; // Only validate first matching config file
+            }
+          }
+        }
+
+        if (totalConfigs > 0) {
+          result.passedChecks.push(`✅ CI configs: ${validConfigs}/${totalConfigs} valid`);
+        }
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to validate CI configs: ${message}`);
+  }
+
+  // =========================================================================
   // Print Results
   // =========================================================================
   console.log('📊 Results:\n');

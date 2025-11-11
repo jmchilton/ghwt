@@ -50,6 +50,7 @@
     "commander": "^11.1.0",
     "enquirer": "^2.4.1",
     "execa": "^8.0.1",
+    "gh-ci-artifacts": "file:../gh-ci-artifacts",
     "js-yaml": "^4.1.0",
     "zod": "^4.1.12"
   },
