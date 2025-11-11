@@ -7,6 +7,7 @@ import { syncCommand } from './commands/sync.js';
 import { rmCommand } from './commands/rm.js';
 import { cloneCommand } from './commands/clone.js';
 import { attachCmd } from './commands/attach.js';
+import { attachPrCommand } from './commands/attach-pr.js';
 import { codeCommand } from './commands/code.js';
 import { noteCommand } from './commands/note.js';
 import { ghCommand } from './commands/gh.js';
@@ -105,6 +106,21 @@ program
       await attachCmd(project, branch, {
         existingTerminal: cmdOptions.existingTerminal,
       });
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('attach-pr [project] [branch]')
+  .description(
+    'Attach a pull request to an existing worktree\nRun without args to pick from list, or with project to filter',
+  )
+  .option('-n, --number <pr-number>', 'Pull request number (required)')
+  .action(async (project, branch, options) => {
+    try {
+      await attachPrCommand(project, branch, options.number);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
