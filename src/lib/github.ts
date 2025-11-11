@@ -1,5 +1,33 @@
 import { execa } from 'execa';
 
+/**
+ * Get the appropriate repo for PR operations.
+ * For forked repos, use upstream if available; otherwise use origin.
+ */
+export async function getPRRepoUrl(repoPath: string): Promise<string | undefined> {
+  try {
+    // Try to get upstream remote first (for forked repos)
+    const { stdout: upstreamUrl } = await execa('git', ['remote', 'get-url', 'upstream'], {
+      cwd: repoPath,
+    }).catch(() => ({ stdout: '' }));
+
+    if (upstreamUrl && upstreamUrl.trim()) {
+      const repoMatch = upstreamUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
+      return repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+    }
+
+    // Fall back to origin
+    const { stdout: originUrl } = await execa('git', ['remote', 'get-url', 'origin'], {
+      cwd: repoPath,
+    });
+
+    const repoMatch = originUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
+    return repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+  } catch (error) {
+    return undefined;
+  }
+}
+
 export interface PRInfo {
   number: number;
   state: string;

@@ -1,10 +1,9 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
-import { getPRInfo } from '../lib/github.js';
+import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
-import { readNote, updateNoteMetadata } from '../lib/obsidian.js';
+import { updateNoteMetadata } from '../lib/obsidian.js';
 
 export async function attachPrCommand(
   project?: string,
@@ -56,14 +55,8 @@ export async function attachPrCommand(
   }
 
   try {
-    // Get repo URL to pass to gh CLI
-    const { stdout: repoUrl } = await execa('git', ['remote', 'get-url', 'origin'], {
-      cwd: repoPath,
-    });
-
-    // Extract owner/repo from URL
-    const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-    const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+    // Get the appropriate repo URL for PR operations (upstream if available, else origin)
+    const ghRepo = await getPRRepoUrl(repoPath);
 
     // Fetch PR info
     const prInfo = await getPRInfo(prNumber, ghRepo);

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { execa } from 'execa';
 import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
 import { getGitInfo, isBareRepository, branchExists } from '../lib/git.js';
-import { getPRInfo } from '../lib/github.js';
+import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { createWorktreeNote } from '../lib/obsidian.js';
 import {
   shouldFetchArtifacts,
@@ -49,13 +49,8 @@ export async function createCommand(project: string, branchArg: string): Promise
   } else if (branchArg.startsWith('pr/')) {
     const prNumber = branchArg.slice(3);
     try {
-      // Get repo URL to pass to gh CLI
-      const { stdout: repoUrl } = await execa('git', ['remote', 'get-url', 'origin'], {
-        cwd: repoPath,
-      });
-      // Extract owner/repo from URL (e.g., git@github.com:galaxyproject/galaxy.git -> galaxyproject/galaxy)
-      const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-      const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+      // Get the appropriate repo URL for PR operations (upstream if available, else origin)
+      const ghRepo = await getPRRepoUrl(repoPath);
 
       prInfo = await getPRInfo(prNumber, ghRepo);
       branch = prInfo.headRefName;
