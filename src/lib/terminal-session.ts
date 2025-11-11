@@ -4,6 +4,7 @@ import { load as loadYaml } from 'js-yaml';
 import { getTerminalSessionConfigDir } from './config.js';
 import { GhwtConfig } from '../types.js';
 import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager } from './terminal-session-base.js';
+import { validateSessionConfig } from './schemas.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';
 import { ZellijSessionManager } from './terminal-session-zellij.js';
 
@@ -48,15 +49,19 @@ export function findSessionConfig(repoName: string, config: GhwtConfig): string 
 }
 
 /**
- * Load and parse session config from YAML or JSON file
+ * Load and parse session config from YAML or JSON file with validation
  */
 export function loadSessionConfig(configPath: string): SessionConfig {
-  const content = readFileSync(configPath, 'utf-8');
+  try {
+    const content = readFileSync(configPath, 'utf-8');
 
-  if (configPath.endsWith('.json')) {
-    return JSON.parse(content) as SessionConfig;
-  } else {
-    return loadYaml(content) as SessionConfig;
+    const parsed = configPath.endsWith('.json') ? JSON.parse(content) : loadYaml(content);
+
+    return validateSessionConfig(parsed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Failed to load session config from ${configPath}:\n${message}`);
+    process.exit(1);
   }
 }
 

@@ -14,6 +14,7 @@ import { ghCommand } from './commands/gh.js';
 import { claudeCommand } from './commands/claude.js';
 import { cursorCommand } from './commands/cursor.js';
 import { dashboardCommand } from './commands/dashboard.js';
+import { lintCommand } from './commands/lint.js';
 
 const program = new Command();
 
@@ -205,6 +206,21 @@ program
   .action(async () => {
     try {
       await dashboardCommand();
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('lint')
+  .description('Validate ghwt configuration files')
+  .option('--verbose', 'Show detailed validation messages')
+  .option('--session-only', 'Only check session configs')
+  .option('--config-only', 'Only check global config')
+  .action(async (options) => {
+    try {
+      await lintCommand(options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
