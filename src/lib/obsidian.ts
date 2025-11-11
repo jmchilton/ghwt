@@ -59,6 +59,61 @@ export function writeNote(notePath: string, frontmatter: NoteFrontmatter, body: 
   writeFileSync(notePath, content, 'utf-8');
 }
 
+export function extractUserNotes(body: string): string {
+  // Extract content between "## Notes" and "## Quick Actions" sections
+  const match = body.match(/## Notes\n([\s\S]*?)\n## Quick Actions/);
+  return match ? match[1] : '';
+}
+
+export function generateNoteBody(metadata: Partial<WorktreeMetadata>): string {
+  const ciSection = metadata.ci_viewer_url
+    ? `## CI Artifacts
+- [View Results](${metadata.ci_viewer_url})
+
+`
+    : '';
+
+  // Generate quick action links using Obsidian shell commands URI
+  let quickActionsSection = '## Quick Actions\n\n';
+
+  try {
+    const config = loadConfig();
+    if (config.obsidianVaultName && config.shellCommandExecuteId) {
+      const vault = encodeURIComponent(config.obsidianVaultName);
+      const executeId = encodeURIComponent(config.shellCommandExecuteId);
+      const project = encodeURIComponent(metadata.project || '');
+      const worktree = encodeURIComponent(metadata.branch || '');
+
+      quickActionsSection += `[📝 Open Code](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=code&_project=${project}&_worktree=${worktree})\n`;
+      quickActionsSection += `[📄 Open Note](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=note&_project=${project}&_worktree=${worktree})\n`;
+      quickActionsSection += `[⌨️  Open Terminal](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=attach&_project=${project}&_worktree=${worktree})\n`;
+    }
+  } catch {
+    // If config fails, skip quick actions
+  }
+
+  const linksSection = `## Links
+- [Open in VS Code](vscode://file/${metadata.worktree_path})
+- \`${metadata.worktree_path}\` (copy path)
+${metadata.pr ? `- [PR link](${metadata.pr})` : ''}`;
+
+  const body = `## Summary
+Worktree created for **${metadata.branch}** in project **${metadata.project}**
+
+## TODO
+- [ ] Implement main feature
+- [ ] Push branch
+- [ ] Create PR (if not exists)
+
+${ciSection}## Notes
+
+${quickActionsSection}
+${linksSection}
+`;
+
+  return body;
+}
+
 export function createWorktreeNote(notePath: string, metadata: Partial<WorktreeMetadata>): void {
   const frontmatter: NoteFrontmatter = {
     project: metadata.project,
@@ -86,50 +141,7 @@ export function createWorktreeNote(notePath: string, metadata: Partial<WorktreeM
     last_synced: new Date().toISOString(),
   };
 
-  const ciSection = metadata.ci_viewer_url
-    ? `## CI Artifacts
-- [View Results](${metadata.ci_viewer_url})
-
-`
-    : '';
-
-  // Generate quick action links using Obsidian shell commands URI
-  let quickActionsSection = '## Quick Actions\n\n';
-
-  try {
-    const config = loadConfig();
-    if (config.obsidianVaultName && config.shellCommandExecuteId) {
-      const vault = encodeURIComponent(config.obsidianVaultName);
-      const executeId = encodeURIComponent(config.shellCommandExecuteId);
-      const project = encodeURIComponent(metadata.project || '');
-      const worktree = encodeURIComponent(metadata.branch || '');
-
-      quickActionsSection += `[📝 Open Code](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=code&_project=${project}&_worktree=${worktree})\n`;
-      quickActionsSection += `[📄 Open Note](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=note&_project=${project}&_worktree=${worktree})\n`;
-      quickActionsSection += `[⌨️  Open Terminal](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=attach&_project=${project}&_worktree=${worktree})\n`;
-    }
-  } catch {
-    // If config fails, skip quick actions
-  }
-
-  const body = `${quickActionsSection}
-
-## Summary
-Worktree created for **${metadata.branch}** in project **${metadata.project}**
-
-## TODO
-- [ ] Implement main feature
-- [ ] Push branch
-- [ ] Create PR (if not exists)
-
-## Links
-- [Open in VS Code](vscode://file/${metadata.worktree_path})
-- \`${metadata.worktree_path}\` (copy path)
-${metadata.pr ? `- [PR link](${metadata.pr})` : ''}
-
-${ciSection}## Notes
-`;
-
+  const body = generateNoteBody(metadata);
   writeNote(notePath, frontmatter, body);
 }
 
@@ -143,7 +155,14 @@ export function updateNoteMetadata(notePath: string, updates: Partial<WorktreeMe
     last_synced: new Date().toISOString(),
   };
 
-  writeNote(notePath, merged, body);
+  // Preserve user notes from existing body, regenerate other sections
+  const userNotes = extractUserNotes(body);
+  const newBody = generateNoteBody(merged);
+
+  // Insert preserved user notes after the Notes section
+  const finalBody = newBody.replace(/## Notes\n/, `## Notes\n${userNotes}`);
+
+  writeNote(notePath, merged, finalBody);
 }
 
 export function calculateDaysSinceActivity(notePath: string): number {
