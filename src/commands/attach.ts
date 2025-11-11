@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { attachCommand, type AttachCommandOptions } from '../lib/terminal-session.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { resolveBranch } from '../lib/worktree-list.js';
 
 export async function attachCmd(
   project?: string,
@@ -17,6 +18,9 @@ export async function attachCmd(
     const picked = await pickWorktree(project);
     selectedProject = picked.project;
     selectedBranch = picked.branch;
+  } else if (selectedBranch && selectedProject) {
+    // Resolve branch to get the full reference with type prefix
+    selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
   const config = loadConfig();

@@ -99,3 +99,78 @@ export function listWorktrees(filterProject?: string): WorktreeInfo[] {
 export function formatWorktreeForDisplay(info: WorktreeInfo): string {
   return `${info.displayName}`;
 }
+
+/**
+ * Resolve a branch name by checking the filesystem.
+ * Makes the branch type prefix (feature/, bug/, branch/, pr/) optional at runtime.
+ *
+ * Examples:
+ * - resolveBranch('galaxy', 'structured_tool_state') -> 'branch/structured_tool_state'
+ * - resolveBranch('galaxy', 'feature-main') -> 'feature/main'
+ * - resolveBranch('galaxy', 'feature/main') -> 'feature/main' (passthrough)
+ *
+ * @returns The resolved branch name with prefix, or the input if no match found
+ */
+export function resolveBranch(project: string, branchInput: string): string {
+  const config = loadConfig();
+  const projectsRoot = expandPath(config.projectsRoot);
+  const worktreesRoot = join(projectsRoot, config.worktreesDir);
+
+  if (!existsSync(worktreesRoot)) {
+    return branchInput; // Fallback to input if worktrees root doesn't exist
+  }
+
+  // If the input already has a prefix, return as-is
+  if (
+    branchInput.startsWith('feature/') ||
+    branchInput.startsWith('bug/') ||
+    branchInput.startsWith('branch/') ||
+    branchInput.startsWith('pr/')
+  ) {
+    return branchInput;
+  }
+
+  try {
+    const entries = readdirSync(worktreesRoot, { withFileTypes: true });
+
+    // Convert input to directory name pattern (replace / with -)
+    const normalizedInput = branchInput.replace(/\//g, '-');
+
+    // Try matching in order: feature, bug, branch, pr
+    const typePrefixes = ['feature', 'bug', 'branch', 'pr'];
+
+    for (const type of typePrefixes) {
+      const expectedDirName = `${project}-${type}-${normalizedInput}`;
+      if (entries.some((e) => e.isDirectory() && e.name === expectedDirName)) {
+        return `${type}/${branchInput.replace(/-/g, '/')}`;
+      }
+    }
+
+    // Fallback: look for any directory matching project-<anything>-input
+    // This handles cases where the input itself contains hyphens
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+
+      const expectedPrefix = `${project}-`;
+      if (!entry.name.startsWith(expectedPrefix)) continue;
+
+      const remainder = entry.name.slice(expectedPrefix.length);
+
+      // Try to match by extracting type and comparing the rest
+      const parts = remainder.split('-');
+      if (parts.length >= 2) {
+        const type = parts[0];
+        if (['feature', 'bug', 'branch', 'pr'].includes(type)) {
+          const nameFromDir = parts.slice(1).join('-');
+          if (nameFromDir === normalizedInput) {
+            return `${type}/${nameFromDir.replace(/-/g, '/')}`;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    // Silently fail and return input
+  }
+
+  return branchInput; // Fallback to input if no match found
+}

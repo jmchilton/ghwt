@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { resolveBranch } from '../lib/worktree-list.js';
 
 /**
  * Parse YAML frontmatter from note to extract PR URL
@@ -33,6 +34,9 @@ export async function ghCommand(project?: string, branch?: string): Promise<void
     const picked = await pickWorktree(project);
     selectedProject = picked.project;
     selectedBranch = picked.branch;
+  } else if (selectedBranch && selectedProject) {
+    // Resolve branch to get the full reference with type prefix
+    selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
   const config = loadConfig();

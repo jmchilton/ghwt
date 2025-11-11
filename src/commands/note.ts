@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { resolveBranch } from '../lib/worktree-list.js';
 
 export async function noteCommand(project?: string, branch?: string): Promise<void> {
   let selectedProject = project;
@@ -13,6 +14,9 @@ export async function noteCommand(project?: string, branch?: string): Promise<vo
     const picked = await pickWorktree(project);
     selectedProject = picked.project;
     selectedBranch = picked.branch;
+  } else if (selectedBranch && selectedProject) {
+    // Resolve branch to get the full reference with type prefix
+    selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
   const config = loadConfig();
