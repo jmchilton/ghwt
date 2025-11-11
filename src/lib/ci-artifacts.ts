@@ -63,7 +63,7 @@ export async function fetchCIArtifacts(
   repoName?: string,
   options?: { verbose?: boolean },
 ): Promise<void> {
-  const args = ['gh-ci-artifacts', String(ref), '--output-dir', outputDir, '--repo', repo];
+  const args = [String(ref), '--output-dir', outputDir, '--repo', repo];
 
   // Check for CI artifacts config file
   if (repoName) {
@@ -85,7 +85,7 @@ export async function fetchCIArtifacts(
   }
 
   try {
-    await execa('npx', args);
+    await execa('gh-ci-artifacts', args);
   } catch (error: unknown) {
     // Exit code 2 = incomplete (workflows still in progress), which is OK
     // Exit code 1 = partial success (some artifacts failed)
