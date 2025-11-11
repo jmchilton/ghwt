@@ -1,9 +1,11 @@
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { execa } from 'execa';
-import { loadConfig, expandPath } from '../lib/config.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch } from '../lib/worktree-list.js';
+import { loadProjectPaths, getNotePath } from '../lib/paths.js';
+import { assertRepoExists } from '../lib/errors.js';
+import { parseGitRepoUrl } from '../lib/github.js';
 
 /**
  * Parse YAML frontmatter from note to extract PR URL
@@ -39,25 +41,13 @@ export async function ghCommand(project?: string, branch?: string): Promise<void
     selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
-  const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const reposRoot = join(projectsRoot, config.repositoriesDir);
-  const vaultRoot = expandPath(config.vaultPath);
+  const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
   const repoPath = join(reposRoot, selectedProject);
-  const notePath = join(
-    vaultRoot,
-    'projects',
-    selectedProject,
-    'worktrees',
-    selectedBranch.replace(/\//g, '-') + '.md',
-  );
+  const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);
 
   // Check if repo exists
-  if (!existsSync(repoPath)) {
-    console.error(`❌ Repository not found: ${repoPath}`);
-    process.exit(1);
-  }
+  assertRepoExists(repoPath);
 
   let url = '';
 
@@ -78,11 +68,9 @@ export async function ghCommand(project?: string, branch?: string): Promise<void
       });
 
       // Extract owner/repo from URL
-      const repoMatch = remoteUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-      if (repoMatch) {
-        const owner = repoMatch[1];
-        const repo = repoMatch[2].replace(/\.git$/, '');
-        url = `https://github.com/${owner}/${repo}/tree/${selectedBranch}`;
+      const parsed = parseGitRepoUrl(remoteUrl);
+      if (parsed) {
+        url = `https://github.com/${parsed.owner}/${parsed.repo}/tree/${selectedBranch}`;
       }
     } catch (error) {
       console.error(`❌ Failed to get GitHub URL: ${error}`);

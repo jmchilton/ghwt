@@ -1,9 +1,8 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
 import { execa } from 'execa';
-import { loadConfig, expandPath } from '../lib/config.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch } from '../lib/worktree-list.js';
+import { loadProjectPaths, getWorktreePath } from '../lib/paths.js';
+import { assertWorktreeExists } from '../lib/errors.js';
 
 export async function cursorCommand(project?: string, branch?: string): Promise<void> {
   let selectedProject = project;
@@ -23,18 +22,11 @@ export async function cursorCommand(project?: string, branch?: string): Promise<
     selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
-  const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
-
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, '-')}`;
-  const worktreePath = join(worktreesRoot, worktreeName);
+  const { config, projectsRoot } = loadProjectPaths();
+  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, selectedBranch);
 
   // Check if worktree exists
-  if (!existsSync(worktreePath)) {
-    console.error(`❌ Worktree not found: ${worktreePath}`);
-    process.exit(1);
-  }
+  assertWorktreeExists(worktreePath);
 
   try {
     await execa('cursor', [worktreePath]);

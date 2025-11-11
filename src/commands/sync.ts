@@ -20,6 +20,7 @@ import { listWorktrees } from '../lib/worktree-list.js';
 import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
 import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
 import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
+import { getNotePath, getSessionName } from '../lib/paths.js';
 import { WorktreeMetadata } from '../types.js';
 
 export async function syncCommand(
@@ -175,14 +176,8 @@ export async function syncCommand(
   const allWorktrees = listWorktrees(project);
 
   for (const wt of allWorktrees) {
-    const notePath = join(
-      vaultRoot,
-      'projects',
-      wt.project,
-      'worktrees',
-      wt.branch.replace(/\//g, '-') + '.md',
-    );
-    const sessionName = `${wt.project}-${wt.branch.replace(/\//g, '-')}`;
+    const notePath = getNotePath(vaultRoot, wt.project, wt.branch);
+    const sessionName = getSessionName(wt.project, wt.branch);
 
     // If worktree exists but note doesn't, recreate it
     if (!existsSync(notePath)) {

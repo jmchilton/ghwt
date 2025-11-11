@@ -1,9 +1,9 @@
 import { join } from 'path';
-import { existsSync } from 'fs';
-import { loadConfig, expandPath } from '../lib/config.js';
 import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch } from '../lib/worktree-list.js';
+import { loadProjectPaths, getWorktreePath, getNotePath } from '../lib/paths.js';
+import { assertWorktreeExists, assertNoteExists } from '../lib/errors.js';
 import { updateNoteMetadata } from '../lib/obsidian.js';
 
 export async function attachPrCommand(
@@ -34,29 +34,17 @@ export async function attachPrCommand(
     selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
-  const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const reposRoot = join(projectsRoot, config.repositoriesDir);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
-  const vaultRoot = expandPath(config.vaultPath);
+  const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
   const repoPath = join(reposRoot, selectedProject);
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, '-')}`;
-  const worktreePath = join(worktreesRoot, worktreeName);
-  const noteDir = join(vaultRoot, 'projects', selectedProject, 'worktrees');
-  const notePath = join(noteDir, selectedBranch.replace(/\//g, '-') + '.md');
+  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, selectedBranch);
+  const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);
 
   // Check if worktree exists
-  if (!existsSync(worktreePath)) {
-    console.error(`❌ Worktree not found: ${worktreePath}`);
-    process.exit(1);
-  }
+  assertWorktreeExists(worktreePath);
 
   // Check if note exists
-  if (!existsSync(notePath)) {
-    console.error(`❌ Note not found: ${notePath}`);
-    process.exit(1);
-  }
+  assertNoteExists(notePath);
 
   try {
     // Get the appropriate repo URL for PR operations (upstream if available, else origin)

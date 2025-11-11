@@ -176,3 +176,12 @@ export function calculateDaysSinceActivity(notePath: string): number {
   const diffMs = now.getTime() - lastModified.getTime();
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
+
+/**
+ * Get Obsidian URL to open a note
+ * @example getObsidianNoteUrl('galaxy', 'feature/main') => 'obsidian://open?vault=projects&file=projects/galaxy/worktrees/feature-main.md'
+ */
+export function getObsidianNoteUrl(project: string, branch: string): string {
+  const normalizedBranch = branch.replace(/\//g, '-');
+  return `obsidian://open?vault=projects&file=projects/${project}/worktrees/${normalizedBranch}.md`;
+}

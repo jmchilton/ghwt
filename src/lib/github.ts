@@ -1,6 +1,27 @@
 import { execa } from 'execa';
 
 /**
+ * Parse a git repository URL and extract owner/repo
+ * @example parseGitRepoUrl('git@github.com:owner/repo.git') => { owner: 'owner', repo: 'repo' }
+ */
+export function parseGitRepoUrl(repoUrl: string): { owner: string; repo: string } | null {
+  const match = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
+  if (!match) return null;
+  return {
+    owner: match[1],
+    repo: match[2].replace(/\.git$/, ''),
+  };
+}
+
+/**
+ * Format a git repository URL into owner/repo format
+ */
+export function formatGhRepo(repoUrl: string): string | undefined {
+  const parsed = parseGitRepoUrl(repoUrl);
+  return parsed ? `${parsed.owner}/${parsed.repo}` : undefined;
+}
+
+/**
  * Get the appropriate repo for PR operations.
  * For forked repos, use upstream if available; otherwise use origin.
  */
@@ -12,8 +33,7 @@ export async function getPRRepoUrl(repoPath: string): Promise<string | undefined
     }).catch(() => ({ stdout: '' }));
 
     if (upstreamUrl && upstreamUrl.trim()) {
-      const repoMatch = upstreamUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-      return repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+      return formatGhRepo(upstreamUrl);
     }
 
     // Fall back to origin
@@ -21,8 +41,7 @@ export async function getPRRepoUrl(repoPath: string): Promise<string | undefined
       cwd: repoPath,
     });
 
-    const repoMatch = originUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-    return repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+    return formatGhRepo(originUrl);
   } catch (error) {
     return undefined;
   }

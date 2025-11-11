@@ -1,9 +1,8 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
-import { loadConfig, expandPath } from '../lib/config.js';
 import { attachCommand, type AttachCommandOptions } from '../lib/terminal-session.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch } from '../lib/worktree-list.js';
+import { loadProjectPaths, getWorktreePath } from '../lib/paths.js';
+import { assertWorktreeExists } from '../lib/errors.js';
 
 export async function attachCmd(
   project?: string,
@@ -23,18 +22,11 @@ export async function attachCmd(
     selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
-  const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
-
-  const worktreeName = `${selectedProject}-${selectedBranch.replace(/\//g, '-')}`;
-  const worktreePath = join(worktreesRoot, worktreeName);
+  const { config, projectsRoot } = loadProjectPaths();
+  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, selectedBranch);
 
   // Check if worktree exists
-  if (!existsSync(worktreePath)) {
-    console.error(`❌ Worktree not found: ${worktreePath}`);
-    process.exit(1);
-  }
+  assertWorktreeExists(worktreePath);
 
   try {
     await attachCommand(selectedProject, selectedBranch, worktreePath, config, options);

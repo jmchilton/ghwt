@@ -12,27 +12,21 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { launchSession } from '../lib/terminal-session.js';
+import { loadProjectPaths, getWorktreePath, getNotePath } from '../lib/paths.js';
+import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
 
 export async function createCommand(project: string, branchArg: string): Promise<void> {
-  const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const reposRoot = join(projectsRoot, config.repositoriesDir);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
-  const vaultRoot = expandPath(config.vaultPath);
+  const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
   const ciArtifactsDir = getCiArtifactsDir(config);
 
   const repoPath = join(reposRoot, project);
-  const worktreeName = `${project}-${branchArg.replace(/\//g, '-')}`;
-  const worktreePath = join(worktreesRoot, worktreeName);
+  const worktreePath = getWorktreePath(projectsRoot, config, project, branchArg);
   const noteDir = join(vaultRoot, 'projects', project, 'worktrees');
-  const notePath = join(noteDir, branchArg.replace(/\//g, '-') + '.md');
+  const notePath = getNotePath(vaultRoot, project, branchArg);
 
   // Check repo exists
-  if (!existsSync(repoPath)) {
-    console.error(`❌ Repo not found: ${repoPath}`);
-    process.exit(1);
-  }
+  assertRepoExists(repoPath);
 
   console.log(`🔹 Repository: ${repoPath}`);
 

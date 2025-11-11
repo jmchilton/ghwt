@@ -1,9 +1,9 @@
 import { join } from 'path';
 import { existsSync, rmSync, mkdirSync, cpSync } from 'fs';
 import { execa } from 'execa';
-import { loadConfig, expandPath } from '../lib/config.js';
 import { killSession } from '../lib/terminal-session.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { loadProjectPaths, getWorktreePath, getNotePath, getSessionName, normalizeBundle } from '../lib/paths.js';
 
 export async function rmCommand(project?: string, branch?: string): Promise<void> {
   // Show picker if project or branch not specified
@@ -13,23 +13,17 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
     branch = picked.branch;
   }
 
-  const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const reposRoot = join(projectsRoot, config.repositoriesDir);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
-  const vaultRoot = expandPath(config.vaultPath);
+  const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
   const repoPath = join(reposRoot, project);
-  const worktreeName = `${project}-${branch.replace(/\//g, '-')}`;
-  const worktreePath = join(worktreesRoot, worktreeName);
-  const noteDir = join(vaultRoot, 'projects', project, 'worktrees');
-  const notePath = join(noteDir, branch.replace(/\//g, '-') + '.md');
+  const worktreePath = getWorktreePath(projectsRoot, config, project, branch);
+  const notePath = getNotePath(vaultRoot, project, branch);
   const archiveDir = join(projectsRoot, 'old');
 
   console.log(`🗑️  Removing worktree: ${branch}`);
 
   // Kill session if it exists
-  const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
+  const sessionName = getSessionName(project, branch);
   try {
     await killSession(sessionName, config);
     console.log(`✅ Killed terminal session: ${sessionName}`);
@@ -68,7 +62,7 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
       mkdirSync(archiveDir, { recursive: true });
 
       // Copy note to archive
-      const archiveNotePath = join(archiveDir, `${project}-${branch.replace(/\//g, '-')}.md`);
+      const archiveNotePath = join(archiveDir, `${project}-${normalizeBundle(branch)}.md`);
       cpSync(notePath, archiveNotePath);
 
       // Delete original note
