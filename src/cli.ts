@@ -16,6 +16,8 @@ import { cursorCommand } from './commands/cursor.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { lintCommand } from './commands/lint.js';
 import { cleanSessionsCommand } from './commands/clean-sessions.js';
+import { ciCleanCommand } from './commands/ci-artifacts-clean.js';
+import { ciDownloadCommand } from './commands/ci-artifacts-download.js';
 
 const program = new Command();
 
@@ -232,6 +234,20 @@ program
   });
 
 program
+  .command('ci-artifacts-clean [project] [branch]')
+  .description(
+    'Clean downloaded CI artifacts and summaries for worktrees\nRun without args to clean all, or with project to filter',
+  )
+  .action(async (project, branch) => {
+    try {
+      await ciCleanCommand(project, branch);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
   .command('clean-sessions')
   .description('Kill all active ghwt terminal sessions')
   .option('--force', 'Skip confirmation prompt')
@@ -239,6 +255,21 @@ program
   .action(async (options) => {
     try {
       await cleanSessionsCommand(options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('ci-artifacts-download [project] [branch]')
+  .description(
+    'Download CI artifacts and summaries for PR worktrees\nRun without args to download all, or with project to filter',
+  )
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
+    try {
+      await ciDownloadCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

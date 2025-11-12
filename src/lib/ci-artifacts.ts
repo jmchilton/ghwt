@@ -222,3 +222,35 @@ export async function getCIMetadata(
     ci_head_sha: currentSha,
   };
 }
+
+export async function fetchAndUpdateCIMetadata(
+  ref: string | number,
+  ghRepo: string,
+  artifactsPath: string,
+  currentSha: string,
+  repoName?: string,
+  options?: { verbose?: boolean },
+): Promise<Partial<WorktreeMetadata>> {
+  const { mkdirSync } = await import('fs');
+
+  // Create directory if it doesn't exist
+  mkdirSync(artifactsPath, { recursive: true });
+
+  // Fetch artifacts (always do full fetch for this operation)
+  if (options?.verbose) {
+    console.log(`  📦 Fetching CI artifacts...`);
+  }
+
+  await fetchCIArtifacts(ref, ghRepo, artifactsPath, false, repoName, options);
+
+  // Parse CI metadata
+  const ciMeta = await getCIMetadata(artifactsPath, currentSha);
+
+  if (options?.verbose) {
+    console.log(
+      `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
+    );
+  }
+
+  return ciMeta;
+}

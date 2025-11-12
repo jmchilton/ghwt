@@ -1,0 +1,15 @@
+layout {
+  tab name="claude" {
+    pane name="claude" {
+      cwd "/Users/jxc755/projects/worktrees/ghwt-feature-main"
+      command "/bin/zsh" {
+        args "-c" "claude --continue"
+      }
+    };
+  };
+  tab name="shell" {
+    pane name="shell" {
+      cwd "/Users/jxc755/projects/worktrees/ghwt-feature-main"
+    };
+  };
+}
