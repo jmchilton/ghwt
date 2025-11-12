@@ -70,52 +70,23 @@ export async function isUIAvailable(ui: 'wezterm' | 'ghostty' | 'none'): Promise
   if (ui === 'none') return true; // 'none' is always valid
 
   try {
-    const { existsSync } = await import('fs');
     const { execa } = await import('execa');
-
-    if (ui === 'ghostty') {
-      // On macOS, check if Ghostty.app exists in /Applications
-      const appPath = '/Applications/Ghostty.app';
-      const homeAppPath = `${process.env.HOME}/Applications/Ghostty.app`;
-      return existsSync(appPath) || existsSync(homeAppPath);
-    } else {
-      // For other apps, check if command exists
-      await execa(ui, ['--help']);
-      return true;
-    }
+    await execa(ui, ['--help']);
+    return true;
   } catch {
     return false;
   }
 }
 
 /**
- * Launch ghostty with command (handles macOS requirement to use `open`)
+ * Launch ghostty with command (same as wezterm - just call directly)
  */
 export async function launchGhostty(
   args: string[],
   options?: { stdio?: 'inherit' | 'pipe' | 'ignore' },
 ): Promise<void> {
   const { execa } = await import('execa');
-
-  // Ghostty on macOS requires special handling for -e flag
-  // Convert args like ['-e', 'zellij', 'attach', 'session']
-  // to: open -a Ghostty --args -e sh -c "zellij attach session"
-  const openArgs: string[] = ['-a', 'Ghostty', '--args'];
-
-  if (args[0] === '-e') {
-    // If using -e flag, wrap the command in sh -c for proper parsing
-    // This ensures all arguments are treated as a single command
-    const command = args
-      .slice(1)
-      .map((arg) => (arg.includes(' ') ? `'${arg.replace(/'/g, "'\\''")}'` : arg))
-      .join(' ');
-    openArgs.push('-e', 'sh', '-c', command);
-  } else {
-    // For other args, pass them through as-is
-    openArgs.push(...args);
-  }
-
-  await execa('open', openArgs, options);
+  await execa('ghostty', args, options);
 }
 
 /**
