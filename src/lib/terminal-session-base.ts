@@ -96,8 +96,25 @@ export async function launchGhostty(
   options?: { stdio?: 'inherit' | 'pipe' | 'ignore' },
 ): Promise<void> {
   const { execa } = await import('execa');
-  // On macOS, must use `open -a Ghostty.app --args <args>`
-  const openArgs = ['-a', 'Ghostty', '--args', ...args];
+
+  // Ghostty on macOS requires special handling for -e flag
+  // Convert args like ['-e', 'zellij', 'attach', 'session']
+  // to: open -a Ghostty --args -e sh -c "zellij attach session"
+  const openArgs: string[] = ['-a', 'Ghostty', '--args'];
+
+  if (args[0] === '-e') {
+    // If using -e flag, wrap the command in sh -c for proper parsing
+    // This ensures all arguments are treated as a single command
+    const command = args
+      .slice(1)
+      .map((arg) => (arg.includes(' ') ? `'${arg.replace(/'/g, "'\\''")}'` : arg))
+      .join(' ');
+    openArgs.push('-e', 'sh', '-c', command);
+  } else {
+    // For other args, pass them through as-is
+    openArgs.push(...args);
+  }
+
   await execa('open', openArgs, options);
 }
 
