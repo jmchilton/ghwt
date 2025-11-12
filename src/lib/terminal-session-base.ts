@@ -70,14 +70,19 @@ export async function isUIAvailable(ui: 'wezterm' | 'ghostty' | 'none'): Promise
   if (ui === 'none') return true; // 'none' is always valid
 
   try {
+    const { existsSync } = await import('fs');
     const { execa } = await import('execa');
+
     if (ui === 'ghostty') {
-      // On macOS, ghostty is launched via `open`, check if the app exists
-      await execa('open', ['-a', 'Ghostty', '--help']);
+      // On macOS, check if Ghostty.app exists in /Applications
+      const appPath = '/Applications/Ghostty.app';
+      const homeAppPath = `${process.env.HOME}/Applications/Ghostty.app`;
+      return existsSync(appPath) || existsSync(homeAppPath);
     } else {
+      // For other apps, check if command exists
       await execa(ui, ['--help']);
+      return true;
     }
-    return true;
   } catch {
     return false;
   }
