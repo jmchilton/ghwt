@@ -244,17 +244,53 @@ export class ZellijSessionManager implements TerminalSessionManager {
   }
 
   /**
-   * Launch zellij directly (native UI)
+   * Launch zellij, optionally wrapped in UI app (wezterm/ghostty)
    */
   async launchUI(sessionName: string, worktreePath: string): Promise<void> {
     const shortenedName = this.shortenSessionName(sessionName);
+    const ui = this.config?.terminalUI || 'wezterm';
 
-    // Simply attach to the session - zellij will use its native UI
-    // UI app setting is handled in terminal-session.ts for zellij
-    await execa('zellij', ['attach', shortenedName], {
-      cwd: worktreePath,
-      stdio: 'inherit',
-    });
+    if (ui === 'none') {
+      // Direct zellij attach
+      await execa('zellij', ['attach', shortenedName], {
+        cwd: worktreePath,
+        stdio: 'inherit',
+      });
+      return;
+    }
+
+    // Launch UI app with zellij attached
+    if (ui === 'wezterm') {
+      await execa('wezterm', [
+        'start',
+        '--workspace',
+        shortenedName,
+        '--cwd',
+        worktreePath,
+        '--',
+        'zellij',
+        'attach',
+        shortenedName,
+      ]);
+    } else if (ui === 'ghostty') {
+      // Ghostty: launch with class and execute zellij attach
+      await execa('ghostty', [
+        '--class',
+        shortenedName,
+        '--working-directory',
+        worktreePath,
+        '--',
+        'zellij',
+        'attach',
+        shortenedName,
+      ]);
+    } else {
+      // Unknown UI, fall back to direct zellij attach
+      await execa('zellij', ['attach', shortenedName], {
+        cwd: worktreePath,
+        stdio: 'inherit',
+      });
+    }
   }
 
   /**

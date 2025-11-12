@@ -103,23 +103,9 @@ export async function launchSession(
     await manager.createSession(sessionName, config, worktreePath);
     console.log(`⚙️  Terminal session created: ${sessionName}`);
 
-    // Launch UI based on config
-    const ui = ghwtConfig.terminalUI || 'wezterm';
-    if (ui === 'wezterm' || ui === 'ghostty') {
-      // For tmux: launch UI app which wraps tmux
-      // For zellij: launch UI app which wraps zellij
-      if (ghwtConfig.terminalMultiplexer === 'zellij') {
-        // Zellij already running, open in UI app
-        const { execa } = await import('execa');
-        await execa(ui, ['--class', sessionName, '--cwd', worktreePath]);
-      } else {
-        // Tmux: use existing launchUI which launches UI app
-        await manager.launchUI(sessionName, worktreePath);
-      }
-    } else {
-      // Direct UI (zellij native, raw tmux, etc.)
-      await manager.launchUI(sessionName, worktreePath);
-    }
+    // Launch UI app - let manager handle it
+    // (managers know how to wrap multiplexer commands with UI apps)
+    await manager.launchUI(sessionName, worktreePath);
   } catch (error) {
     throw new Error(`Failed to launch terminal session: ${error}`);
   }
