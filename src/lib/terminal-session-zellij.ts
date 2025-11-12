@@ -89,46 +89,44 @@ export class ZellijSessionManager implements TerminalSessionManager {
         const substitutedRoot = substituteVariables(windowRoot, vars);
         const panes = window.panes || [];
 
-        // Start pane for this window
-        layout.push(`    pane name="${window.name}" {`);
-        layout.push(`      cwd "${substitutedRoot}"`);
+        // Collect all commands to run (pane can only have ONE command in zellij)
+        const allCommands: string[] = [];
 
-        // Run cascading pre-commands: session → tab → window → pane command
         // 1. Session-level pre commands
         if (normalizedConfig.pre && normalizedConfig.pre.length > 0) {
           for (const preCmd of normalizedConfig.pre) {
-            const substituted = substituteVariables(preCmd, vars);
-            layout.push(`      command "${shell}" {`);
-            layout.push(`        args "-c" "${escapeQuotes(substituted)}"`);
-            layout.push(`      }`);
+            allCommands.push(substituteVariables(preCmd, vars));
           }
         }
 
         // 2. Tab-level pre commands
         if (tab.pre && tab.pre.length > 0) {
           for (const preCmd of tab.pre) {
-            const substituted = substituteVariables(preCmd, vars);
-            layout.push(`      command "${shell}" {`);
-            layout.push(`        args "-c" "${escapeQuotes(substituted)}"`);
-            layout.push(`      }`);
+            allCommands.push(substituteVariables(preCmd, vars));
           }
         }
 
         // 3. Window-level pre commands
         if (window.pre && window.pre.length > 0) {
           for (const preCmd of window.pre) {
-            const substituted = substituteVariables(preCmd, vars);
-            layout.push(`      command "${shell}" {`);
-            layout.push(`        args "-c" "${escapeQuotes(substituted)}"`);
-            layout.push(`      }`);
+            allCommands.push(substituteVariables(preCmd, vars));
           }
         }
 
-        // 4. Run first pane command if exists
+        // 4. Pane command(s)
         if (panes.length > 0 && panes[0]) {
-          const substitutedCmd = substituteVariables(panes[0], vars);
+          allCommands.push(substituteVariables(panes[0], vars));
+        }
+
+        // Start pane for this window
+        layout.push(`    pane name="${window.name}" {`);
+        layout.push(`      cwd "${substitutedRoot}"`);
+
+        // Combine all commands into a single shell invocation
+        if (allCommands.length > 0) {
+          const combinedCmd = allCommands.join(' && ');
           layout.push(`      command "${shell}" {`);
-          layout.push(`        args "-c" "${escapeQuotes(substitutedCmd)}"`);
+          layout.push(`        args "-c" "${escapeQuotes(combinedCmd)}"`);
           layout.push(`      }`);
         }
 
@@ -137,46 +135,44 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
         // Create additional panes (splits) if they exist
         for (let j = 1; j < panes.length; j++) {
-          layout.push(`    pane split direction="vertical" {`);
-          layout.push(`      cwd "${substitutedRoot}"`);
+          // Collect all commands for this split pane
+          const splitCommands: string[] = [];
 
-          // Run cascading pre-commands for split panes
           // 1. Session-level pre commands
           if (normalizedConfig.pre && normalizedConfig.pre.length > 0) {
             for (const preCmd of normalizedConfig.pre) {
-              const substituted = substituteVariables(preCmd, vars);
-              layout.push(`      command "${shell}" {`);
-              layout.push(`        args "-c" "${escapeQuotes(substituted)}"`);
-              layout.push(`      }`);
+              splitCommands.push(substituteVariables(preCmd, vars));
             }
           }
 
           // 2. Tab-level pre commands
           if (tab.pre && tab.pre.length > 0) {
             for (const preCmd of tab.pre) {
-              const substituted = substituteVariables(preCmd, vars);
-              layout.push(`      command "${shell}" {`);
-              layout.push(`        args "-c" "${escapeQuotes(substituted)}"`);
-              layout.push(`      }`);
+              splitCommands.push(substituteVariables(preCmd, vars));
             }
           }
 
           // 3. Window-level pre commands
           if (window.pre && window.pre.length > 0) {
             for (const preCmd of window.pre) {
-              const substituted = substituteVariables(preCmd, vars);
-              layout.push(`      command "${shell}" {`);
-              layout.push(`        args "-c" "${escapeQuotes(substituted)}"`);
-              layout.push(`      }`);
+              splitCommands.push(substituteVariables(preCmd, vars));
             }
           }
 
-          // 4. Run pane command
+          // 4. Pane command
           const cmd = panes[j];
           if (cmd) {
-            const substitutedCmd = substituteVariables(cmd, vars);
+            splitCommands.push(substituteVariables(cmd, vars));
+          }
+
+          layout.push(`    pane split direction="vertical" {`);
+          layout.push(`      cwd "${substitutedRoot}"`);
+
+          // Combine all commands into a single shell invocation
+          if (splitCommands.length > 0) {
+            const combinedCmd = splitCommands.join(' && ');
             layout.push(`      command "${shell}" {`);
-            layout.push(`        args "-c" "${escapeQuotes(substitutedCmd)}"`);
+            layout.push(`        args "-c" "${escapeQuotes(combinedCmd)}"`);
             layout.push(`      }`);
           }
 
