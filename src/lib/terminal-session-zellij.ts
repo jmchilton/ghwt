@@ -119,19 +119,21 @@ export class ZellijSessionManager implements TerminalSessionManager {
         }
 
         // Start pane for this window
-        layout.push(`    pane name="${window.name}" {`);
-        layout.push(`      cwd "${substitutedRoot}"`);
-
         // Combine all commands into a single shell invocation
         if (allCommands.length > 0) {
           const combinedCmd = allCommands.join(' && ');
-          layout.push(`      command "${shell}" {`);
-          layout.push(`        args "-c" "${escapeQuotes(combinedCmd)}"`);
-          layout.push(`      }`);
+          layout.push(`    pane command="${shell}" {`);
+          layout.push(`      name "${window.name}"`);
+          layout.push(`      cwd "${substitutedRoot}"`);
+          layout.push(`      args "-c" "${escapeQuotes(combinedCmd)}"`);
+          layout.push(`    }`);
+        } else {
+          // No commands, just set up the pane with cwd
+          layout.push(`    pane {`);
+          layout.push(`      name "${window.name}"`);
+          layout.push(`      cwd "${substitutedRoot}"`);
+          layout.push(`    }`);
         }
-
-        // Close main pane
-        layout.push(`    };`);
 
         // Create additional panes (splits) if they exist
         for (let j = 1; j < panes.length; j++) {
@@ -165,18 +167,19 @@ export class ZellijSessionManager implements TerminalSessionManager {
             splitCommands.push(substituteVariables(cmd, vars));
           }
 
-          layout.push(`    pane split direction="vertical" {`);
-          layout.push(`      cwd "${substitutedRoot}"`);
-
           // Combine all commands into a single shell invocation
           if (splitCommands.length > 0) {
             const combinedCmd = splitCommands.join(' && ');
-            layout.push(`      command "${shell}" {`);
-            layout.push(`        args "-c" "${escapeQuotes(combinedCmd)}"`);
-            layout.push(`      }`);
+            layout.push(`    pane split direction="vertical" command="${shell}" {`);
+            layout.push(`      cwd "${substitutedRoot}"`);
+            layout.push(`      args "-c" "${escapeQuotes(combinedCmd)}"`);
+            layout.push(`    }`);
+          } else {
+            // No commands, just set up split pane with cwd
+            layout.push(`    pane split direction="vertical" {`);
+            layout.push(`      cwd "${substitutedRoot}"`);
+            layout.push(`    }`);
           }
-
-          layout.push(`    };`);
         }
       }
 
