@@ -1,9 +1,9 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { execa } from 'execa';
 import { expandPath } from './config.js';
 import { WorktreeMetadata } from '../types.js';
 import { loadConfig } from './config.js';
+import { downloadArtifacts, loadConfig as loadGhCiArtifactsConfig, Logger } from 'gh-ci-artifacts';
 
 interface CISummary {
   status: 'complete' | 'partial' | 'incomplete';
@@ -63,41 +63,59 @@ export async function fetchCIArtifacts(
   repoName?: string,
   options?: { verbose?: boolean },
 ): Promise<void> {
-  const args = [String(ref), '--output-dir', outputDir, '--repo', repo];
+  // Load gh-ci-artifacts config
+  let ghCiConfig = await loadGhCiArtifactsConfig();
 
-  // Check for CI artifacts config file
+  // Check for CI artifacts config file and merge if found
   if (repoName) {
     const configFile = findCIConfigFile(repoName);
     if (configFile) {
-      args.push('--config', configFile);
+      const userConfig = await loadGhCiArtifactsConfig(configFile);
+      ghCiConfig = { ...ghCiConfig, ...userConfig };
       if (options?.verbose) {
         console.log(`  📋 Using config: ${configFile}`);
       }
     }
   }
 
-  if (resume) {
-    args.push('--resume');
-  }
-
   if (options?.verbose) {
     console.log(`🔄 Fetching CI artifacts for ${repo}/${ref}...`);
+    console.log(`  📂 Output directory: ${outputDir}`);
   }
 
   try {
-    await execa('gh-ci-artifacts', args);
-  } catch (error: unknown) {
-    // Exit code 2 = incomplete (workflows still in progress), which is OK
-    // Exit code 1 = partial success (some artifacts failed)
-    // Exit code 0 = complete success
-    const exitCode = (error as { exitCode?: number }).exitCode;
-    if (exitCode !== 1 && exitCode !== 2) {
-      if (options?.verbose) {
-        console.log(`⚠️  CI artifact fetch failed: ${error}`);
-      }
-      throw error;
+    // Create logger that respects verbose mode
+    const logger = new Logger(options?.verbose ?? false);
+
+    // Parse ref to determine if it's PR or branch
+    const prNumber = /^\d+$/.test(String(ref)) ? parseInt(String(ref), 10) : undefined;
+    const branchName = prNumber ? undefined : String(ref);
+
+    // Call downloadArtifacts directly (programmatic API)
+    const result = await downloadArtifacts(
+      repo,
+      prNumber,
+      branchName,
+      'origin',
+      outputDir,
+      ghCiConfig,
+      logger,
+      resume,
+      false, // dryRun
+      false, // includeSuccesses
+      false, // wait
+      true, // repoExplicitlyProvided
+    );
+
+    if (options?.verbose) {
+      console.log(`  ✅ Download completed (found ${result.inventory.length} artifacts)`);
     }
-    // For codes 1 and 2, continue - we have partial data
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (options?.verbose) {
+      console.log(`  ⚠️  Download error: ${errorMsg}`);
+    }
+    throw error;
   }
 }
 
