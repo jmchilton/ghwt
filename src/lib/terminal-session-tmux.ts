@@ -32,6 +32,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
+    notePath?: string,
   ): Promise<void> {
     const sessionExists = await this.sessionExists(sessionName);
     if (sessionExists) {

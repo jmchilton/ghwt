@@ -88,6 +88,7 @@ export async function launchSession(
   worktreePath: string,
   ghwtConfig: GhwtConfig,
   verbose = false,
+  notePath?: string,
 ): Promise<void> {
   const configPath = findSessionConfig(project, ghwtConfig);
   if (!configPath) {
@@ -113,8 +114,8 @@ export async function launchSession(
       throw new Error(`Terminal UI '${ui}' is not available`);
     }
 
-    // Create session
-    await manager.createSession(sessionName, config, worktreePath);
+    // Create session with optional note path for template substitution
+    await manager.createSession(sessionName, config, worktreePath, notePath);
     console.log(`⚙️  Terminal session created: ${sessionName}`);
 
     // Launch UI app - let manager handle it

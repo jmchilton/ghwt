@@ -203,6 +203,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
+    notePath?: string,
   ): Promise<void> {
     const shortenedName = shortenSessionName(sessionName);
 
@@ -216,6 +217,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
       worktree_path: worktreePath,
       project: sessionName.split('-')[0],
       branch: sessionName.split('-').slice(1).join('-'),
+      note_path: notePath,
     };
 
     // Generate KDL layout

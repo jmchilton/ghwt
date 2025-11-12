@@ -166,7 +166,7 @@ export async function createCommand(project: string, branchArg: string, verbose 
 
   // Launch terminal session if config exists
   try {
-    await launchSession(project, branch, worktreePath, config, verbose);
+    await launchSession(project, branch, worktreePath, config, verbose, notePath);
     console.log('🖥️  Terminal session launched');
   } catch {
     console.log(`⚠️  Terminal session not configured`);

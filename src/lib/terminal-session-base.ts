@@ -50,7 +50,7 @@ export interface TerminalSessionManager {
   /**
    * Create session with configured windows and panes
    */
-  createSession(sessionName: string, config: SessionConfig, worktreePath: string): Promise<void>;
+  createSession(sessionName: string, config: SessionConfig, worktreePath: string, notePath?: string): Promise<void>;
 
   /**
    * Launch terminal UI attached to session
@@ -76,6 +76,7 @@ export interface TemplateVars {
   worktree_path: string;
   project: string;
   branch: string;
+  note_path?: string;
 }
 
 /**
