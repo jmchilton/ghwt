@@ -64,6 +64,32 @@ export interface TemplateVars {
 }
 
 /**
+ * Shorten session name for zellij (max ~25 chars to be safe)
+ * Uses abbreviations: galaxy-architecture -> ga, feature/implement -> fi
+ * Exported so it can be reused by commands that need to match session names
+ */
+export function shortenSessionName(sessionName: string): string {
+  // Zellij has a strict char limit for session names (be conservative with 25)
+  if (sessionName.length <= 25) {
+    return sessionName;
+  }
+
+  // Try abbreviating: galaxy-architecture-feature-implement -> ga-fi
+  const parts = sessionName.split('-');
+  const abbreviated = parts.map((part) => part[0]).join('');
+
+  if (abbreviated.length <= 32) {
+    return abbreviated;
+  }
+
+  // Fall back to hash + keep project prefix
+  const { createHash } = require('crypto');
+  const hash = createHash('sha256').update(sessionName).digest('hex').substring(0, 8);
+  const project = parts[0] || 'session';
+  return `${project}-${hash}`;
+}
+
+/**
  * Check if a terminal UI application is available
  */
 export async function isUIAvailable(ui: 'wezterm' | 'ghostty' | 'none'): Promise<boolean> {

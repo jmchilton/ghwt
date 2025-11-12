@@ -15,6 +15,7 @@ import { claudeCommand } from './commands/claude.js';
 import { cursorCommand } from './commands/cursor.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { lintCommand } from './commands/lint.js';
+import { cleanSessionsCommand } from './commands/clean-sessions.js';
 
 const program = new Command();
 
@@ -221,6 +222,20 @@ program
   .action(async (options) => {
     try {
       await lintCommand(options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('clean-sessions')
+  .description('Kill all active ghwt terminal sessions')
+  .option('--force', 'Skip confirmation prompt')
+  .option('--verbose', 'Show which sessions are being killed')
+  .action(async (options) => {
+    try {
+      await cleanSessionsCommand(options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

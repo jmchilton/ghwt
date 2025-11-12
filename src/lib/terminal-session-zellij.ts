@@ -12,33 +12,11 @@ import {
   substituteVariables,
   normalizeSessionConfig,
   launchGhostty,
+  shortenSessionName,
 } from './terminal-session-base.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
   constructor(private config?: GhwtConfig) {}
-  /**
-   * Shorten session name for zellij (max ~25 chars to be safe)
-   * Uses abbreviations: galaxy-architecture -> ga, feature/implement -> fi
-   */
-  private shortenSessionName(sessionName: string): string {
-    // Zellij has a strict char limit for session names (be conservative with 25)
-    if (sessionName.length <= 25) {
-      return sessionName;
-    }
-
-    // Try abbreviating: galaxy-architecture-feature-implement -> ga-fi
-    const parts = sessionName.split('-');
-    const abbreviated = parts.map((part) => part[0]).join('');
-
-    if (abbreviated.length <= 32) {
-      return abbreviated;
-    }
-
-    // Fall back to hash + keep project prefix
-    const hash = createHash('sha256').update(sessionName).digest('hex').substring(0, 8);
-    const project = parts[0] || 'session';
-    return `${project}-${hash}`;
-  }
 
   /**
    * Check if zellij session exists
@@ -46,7 +24,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
   async sessionExists(sessionName: string): Promise<boolean> {
     try {
       const { stdout } = await execa('zellij', ['list-sessions']);
-      const shortened = this.shortenSessionName(sessionName);
+      const shortened = shortenSessionName(sessionName);
       return stdout.includes(shortened);
     } catch {
       return false;
@@ -191,7 +169,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
     config: SessionConfig,
     worktreePath: string,
   ): Promise<void> {
-    const shortenedName = this.shortenSessionName(sessionName);
+    const shortenedName = shortenSessionName(sessionName);
 
     const sessionExists = await this.sessionExists(sessionName);
     if (sessionExists) {
@@ -248,7 +226,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
    * Launch zellij, optionally wrapped in UI app (wezterm/ghostty)
    */
   async launchUI(sessionName: string, worktreePath: string): Promise<void> {
-    const shortenedName = this.shortenSessionName(sessionName);
+    const shortenedName = shortenSessionName(sessionName);
     const ui = this.config?.terminalUI || 'wezterm';
 
     if (ui === 'none') {
@@ -293,7 +271,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
     worktreePath: string,
     options?: AttachOptions,
   ): Promise<void> {
-    const shortenedName = this.shortenSessionName(sessionName);
+    const shortenedName = shortenSessionName(sessionName);
 
     const exists = await this.sessionExists(sessionName);
     if (!exists) {
@@ -350,7 +328,7 @@ export class ZellijSessionManager implements TerminalSessionManager {
    * Kill zellij session
    */
   async killSession(sessionName: string): Promise<void> {
-    const shortenedName = this.shortenSessionName(sessionName);
+    const shortenedName = shortenSessionName(sessionName);
 
     try {
       await execa('zellij', ['delete-session', '-f', shortenedName]);

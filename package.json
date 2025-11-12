@@ -52,12 +52,14 @@
     "execa": "^8.0.1",
     "gh-ci-artifacts": "file:../gh-ci-artifacts",
     "js-yaml": "^4.1.0",
+    "prompt-sync": "^4.2.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.10.6",
+    "@types/prompt-sync": "^4.2.3",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
