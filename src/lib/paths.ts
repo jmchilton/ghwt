@@ -45,6 +45,21 @@ export function getNotePath(vaultRoot: string, project: string, branch: string):
 }
 
 /**
+ * Clean branch argument by handling prefixes consistently
+ * Removes 'branch/' prefix but keeps 'feature/' and 'bug/' prefixes
+ * Note: 'pr/' arguments are expected to be resolved to actual branch names by callers
+ * @example cleanBranchArg('branch/iwc_advertise') -> 'iwc_advertise'
+ * @example cleanBranchArg('feature/main') -> 'feature/main'
+ */
+export function cleanBranchArg(branchArg: string): string {
+  if (branchArg.startsWith('branch/')) {
+    return branchArg.slice(7); // Remove "branch/" prefix
+  }
+  // Keep feature/, bug/, and already-resolved branch names as-is
+  return branchArg;
+}
+
+/**
  * Get the session name for a worktree (used by terminal multiplexers)
  */
 export function getSessionName(project: string, branch: string): string {

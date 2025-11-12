@@ -12,7 +12,7 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { launchSession } from '../lib/terminal-session.js';
-import { loadProjectPaths, getWorktreePath, getNotePath } from '../lib/paths.js';
+import { loadProjectPaths, getWorktreePath, getNotePath, cleanBranchArg } from '../lib/paths.js';
 import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
 
@@ -35,12 +35,7 @@ export async function createCommand(project: string, branchArg: string, verbose 
   let prUrl = '';
   let prInfo: { headRefName: string; url: string; checks?: string } | null = null;
 
-  if (branchArg.startsWith('feature/') || branchArg.startsWith('bug/')) {
-    branch = branchArg;
-  } else if (branchArg.startsWith('branch/')) {
-    // Extract branch name without prefix for git operations
-    branch = branchArg.slice(7); // Remove "branch/" prefix
-  } else if (branchArg.startsWith('pr/')) {
+  if (branchArg.startsWith('pr/')) {
     const prNumber = branchArg.slice(3);
     try {
       // Get the appropriate repo URL for PR operations (upstream if available, else origin)
@@ -54,6 +49,9 @@ export async function createCommand(project: string, branchArg: string, verbose 
       console.error(`❌ Failed to fetch PR info: ${error}`);
       process.exit(1);
     }
+  } else if (branchArg.startsWith('feature/') || branchArg.startsWith('bug/') || branchArg.startsWith('branch/')) {
+    // Use shared logic to clean branch argument
+    branch = cleanBranchArg(branchArg);
   } else {
     console.error('❌ Unknown branch prefix. Use feature/, bug/, branch/, or pr/');
     process.exit(1);

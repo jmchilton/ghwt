@@ -3,7 +3,7 @@ import { existsSync, rmSync, mkdirSync, cpSync } from 'fs';
 import { execa } from 'execa';
 import { killSession } from '../lib/terminal-session.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
-import { loadProjectPaths, getWorktreePath, getNotePath, normalizeBundle } from '../lib/paths.js';
+import { loadProjectPaths, getWorktreePath, getNotePath, normalizeBundle, cleanBranchArg } from '../lib/paths.js';
 
 export async function rmCommand(project?: string, branch?: string): Promise<void> {
   // Show picker if project or branch not specified
@@ -15,18 +15,8 @@ export async function rmCommand(project?: string, branch?: string): Promise<void
 
   const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
-  // Clean up branch name to match what create uses
-  // Remove branch type prefix (feature/, bug/, branch/, pr/) for session name
-  let cleanBranch = branch;
-  if (branch.startsWith('feature/') || branch.startsWith('bug/')) {
-    // Keep feature/ and bug/ prefixes
-    cleanBranch = branch;
-  } else if (branch.startsWith('branch/')) {
-    cleanBranch = branch.slice(7); // Remove "branch/" prefix
-  } else if (branch.startsWith('pr/')) {
-    // For PR sessions, the branch name was already resolved by create
-    cleanBranch = branch.slice(3); // Remove "pr/" prefix (would be PR number)
-  }
+  // Clean branch name to match what create uses for session naming
+  const cleanBranch = cleanBranchArg(branch);
 
   const repoPath = join(reposRoot, project);
   const worktreePath = getWorktreePath(projectsRoot, config, project, branch);
