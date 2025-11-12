@@ -48,6 +48,37 @@ export class ZellijSessionManager implements TerminalSessionManager {
     // Get user's default shell, fallback to bash
     const shell = process.env.SHELL || '/bin/bash';
 
+    // Get zellij UI mode (default: 'full')
+    const uiMode = config.zellij_ui?.mode || 'full';
+
+    // Generate default_tab_template with UI bars if needed
+    if (uiMode === 'full' || uiMode === 'compact') {
+      layout.push('  default_tab_template {');
+
+      // Top UI bar
+      if (uiMode === 'full') {
+        layout.push('    pane size=1 borderless=true {');
+        layout.push('      plugin location="zellij:tab-bar"');
+        layout.push('    }');
+      }
+
+      // Content area placeholder
+      layout.push('    children');
+
+      // Bottom UI bar
+      if (uiMode === 'full') {
+        layout.push('    pane size=2 borderless=true {');
+        layout.push('      plugin location="zellij:status-bar"');
+        layout.push('    }');
+      } else if (uiMode === 'compact') {
+        layout.push('    pane size=1 borderless=true {');
+        layout.push('      plugin location="zellij:compact-bar"');
+        layout.push('    }');
+      }
+
+      layout.push('  }');
+    }
+
     // Process tabs
     for (const tab of normalizedConfig.tabs) {
       layout.push(`  tab name="${tab.name}" {`);

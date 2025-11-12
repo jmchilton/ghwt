@@ -17,6 +17,16 @@ export interface SessionConfig {
   pre?: string[];
   tabs?: TabConfig[];
   windows?: WindowConfig[];
+  /**
+   * Zellij-specific UI configuration (ignored by tmux)
+   */
+  zellij_ui?: {
+    /**
+     * UI mode: 'full' (tab-bar + status-bar), 'compact' (minimal), 'none' (no bars)
+     * @default 'full'
+     */
+    mode?: 'full' | 'compact' | 'none';
+  };
 }
 
 export interface AttachOptions {

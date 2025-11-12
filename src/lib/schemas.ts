@@ -72,6 +72,9 @@ export const SessionConfigSchema: z.ZodType<SessionConfig> = z
     pre: z.array(z.string()).optional().describe('Session-level setup commands'),
     tabs: z.array(TabConfigSchema).optional().describe('New format: tabs with windows'),
     windows: z.array(WindowConfigSchema).optional().describe('Legacy format: windows only (wrapped in default tab)'),
+    zellij_ui: z.object({
+      mode: z.enum(['full', 'compact', 'none']).optional().default('full').describe('UI mode: full (tab-bar + status-bar), compact (minimal), none (no bars)'),
+    }).optional().describe('Zellij-specific UI configuration (ignored by tmux)'),
   })
   .strict()
   .refine(
