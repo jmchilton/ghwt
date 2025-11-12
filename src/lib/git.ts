@@ -19,6 +19,23 @@ export async function getRemoteUrl(repoPath: string): Promise<string> {
   return stdout.trim();
 }
 
+export async function getUpstreamUrl(repoPath: string): Promise<string | null> {
+  try {
+    const { stdout } = await execa('git', ['remote', 'get-url', 'upstream'], {
+      cwd: repoPath,
+    });
+    const url = stdout.trim();
+    // If upstream remote doesn't exist, git returns the remote name (e.g., "upstream")
+    // We only return if it's a valid URL
+    if (url && url !== 'upstream' && (url.startsWith('http') || url.startsWith('git@'))) {
+      return url;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function isBareRepository(repoPath: string): Promise<boolean> {
   const { stdout } = await execa('git', ['rev-parse', '--is-bare-repository'], {
     cwd: repoPath,

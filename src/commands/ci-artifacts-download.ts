@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
 import { listWorktrees } from '../lib/worktree-list.js';
 import { readNote, updateNoteMetadata } from '../lib/obsidian.js';
-import { getGitInfo } from '../lib/git.js';
+import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
 import { getCIArtifactsPath, fetchAndUpdateCIMetadata } from '../lib/ci-artifacts.js';
 
 export async function ciDownloadCommand(
@@ -79,7 +79,10 @@ export async function ciDownloadCommand(
       }
 
       const prNumber = prMatch[1];
-      const repoUrl = gitInfo.remoteUrl;
+
+      // Check for upstream remote first (for forked repos)
+      const upstreamUrl = await getUpstreamUrl(wt.path);
+      const repoUrl = upstreamUrl || gitInfo.remoteUrl;
       const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
       const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
       const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : wt.project;
@@ -88,6 +91,10 @@ export async function ciDownloadCommand(
         console.error(`❌ Could not parse repo URL: ${wt.displayName}`);
         errorCount++;
         continue;
+      }
+
+      if (options?.verbose && upstreamUrl) {
+        console.log(`  💡 Using upstream repo (fork detected)`);
       }
 
       const artifactsPath = getCIArtifactsPath(ciArtifactsDir, repoName, prNumber);
