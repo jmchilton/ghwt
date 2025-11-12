@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { expandPath } from './config.js';
 import { WorktreeMetadata } from '../types.js';
 import { loadConfig } from './config.js';
-import { downloadArtifacts, loadConfig as loadGhCiArtifactsConfig, Logger } from 'gh-ci-artifacts';
+import { runAction, loadConfig as loadGhCiArtifactsConfig, Logger } from 'gh-ci-artifacts';
 
 interface CISummary {
   status: 'complete' | 'partial' | 'incomplete';
@@ -91,8 +91,8 @@ export async function fetchCIArtifacts(
     const prNumber = /^\d+$/.test(String(ref)) ? parseInt(String(ref), 10) : undefined;
     const branchName = prNumber ? undefined : String(ref);
 
-    // Call downloadArtifacts directly (programmatic API)
-    const result = await downloadArtifacts(
+    // Call runAction (programmatic API) - orchestrates complete workflow
+    const { summary } = await runAction(
       repo,
       prNumber,
       branchName,
@@ -100,20 +100,22 @@ export async function fetchCIArtifacts(
       outputDir,
       ghCiConfig,
       logger,
-      resume,
-      false, // dryRun
-      false, // includeSuccesses
-      false, // wait
-      true, // repoExplicitlyProvided
+      {
+        resume,
+        dryRun: false,
+        includeSuccesses: false,
+        wait: false,
+        repoExplicitlyProvided: true,
+      },
     );
 
     if (options?.verbose) {
-      console.log(`  ✅ Download completed (found ${result.inventory.length} artifacts)`);
+      console.log(`  ✅ CI artifacts processed - Status: ${summary?.status || 'complete'}`);
     }
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     if (options?.verbose) {
-      console.log(`  ⚠️  Download error: ${errorMsg}`);
+      console.log(`  ⚠️  CI artifacts error: ${errorMsg}`);
     }
     throw error;
   }
