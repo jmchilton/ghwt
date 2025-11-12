@@ -64,6 +64,21 @@ export interface TemplateVars {
 }
 
 /**
+ * Check if a terminal UI application is available in PATH
+ */
+export async function isUIAvailable(ui: 'wezterm' | 'ghostty' | 'none'): Promise<boolean> {
+  if (ui === 'none') return true; // 'none' is always valid
+
+  try {
+    const { execa } = await import('execa');
+    await execa(ui, ['--help']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Substitute template variables in strings
  */
 export function substituteVariables(text: string, vars: TemplateVars): string {

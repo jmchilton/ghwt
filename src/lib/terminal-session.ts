@@ -3,7 +3,7 @@ import { join } from 'path';
 import { load as loadYaml } from 'js-yaml';
 import { getTerminalSessionConfigDir } from './config.js';
 import { GhwtConfig } from '../types.js';
-import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager } from './terminal-session-base.js';
+import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager, isUIAvailable } from './terminal-session-base.js';
 import { validateSessionConfig } from './schemas.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';
 import { ZellijSessionManager } from './terminal-session-zellij.js';
@@ -99,6 +99,19 @@ export async function launchSession(
   const manager = getSessionManager(ghwtConfig);
 
   try {
+    // Validate UI is available before creating session
+    const ui = (ghwtConfig.terminalUI || 'wezterm') as 'wezterm' | 'ghostty' | 'none';
+    const uiAvailable = await isUIAvailable(ui);
+    if (!uiAvailable && ui !== 'none') {
+      console.warn(`⚠️  Terminal UI '${ui}' not found in PATH. Install it first:`);
+      if (ui === 'ghostty') {
+        console.warn(`   brew install ghostty  (or download from https://ghostty.org)`);
+      } else if (ui === 'wezterm') {
+        console.warn(`   brew install wezterm`);
+      }
+      throw new Error(`Terminal UI '${ui}' is not available`);
+    }
+
     // Create session
     await manager.createSession(sessionName, config, worktreePath);
     console.log(`⚙️  Terminal session created: ${sessionName}`);
@@ -143,8 +156,20 @@ export async function attachCommand(
       throw new Error(`Session not found: ${sessionName}`);
     }
 
+    // Validate UI is available
+    const ui = (config.terminalUI || 'wezterm') as 'wezterm' | 'ghostty' | 'none';
+    const uiAvailable = await isUIAvailable(ui);
+    if (!uiAvailable && ui !== 'none') {
+      console.warn(`⚠️  Terminal UI '${ui}' not found in PATH. Install it first:`);
+      if (ui === 'ghostty') {
+        console.warn(`   brew install ghostty  (or download from https://ghostty.org)`);
+      } else if (ui === 'wezterm') {
+        console.warn(`   brew install wezterm`);
+      }
+      throw new Error(`Terminal UI '${ui}' is not available`);
+    }
+
     // Handle UI app mode for tmux (detach other clients first)
-    const ui = config.terminalUI || 'wezterm';
     if ((ui === 'wezterm' || ui === 'ghostty') && config.terminalMultiplexer !== 'zellij') {
       // For tmux with UI app: detach other clients before attaching
       const { execa } = await import('execa');
