@@ -119,17 +119,20 @@ export class ZellijSessionManager implements TerminalSessionManager {
         }
 
         // Start pane for this window
-        // Combine all commands into a single shell invocation
+        // Combine all commands into a single shell invocation, then drop to interactive shell
         if (allCommands.length > 0) {
-          const combinedCmd = allCommands.join(' && ');
-          layout.push(`    pane command="${shell}" {`);
+          // After running commands, drop to interactive shell with 'exec $SHELL'
+          const combinedCmd = allCommands.join(' && ') + ' && exec $SHELL';
+          const startSuspended = window.start_suspended ? ' start_suspended=true' : '';
+          layout.push(`    pane command="${shell}"${startSuspended} {`);
           layout.push(`      name "${window.name}"`);
           layout.push(`      cwd "${substitutedRoot}"`);
           layout.push(`      args "-c" "${escapeQuotes(combinedCmd)}"`);
           layout.push(`    }`);
         } else {
-          // No commands, just set up the pane with cwd
-          layout.push(`    pane {`);
+          // No commands, just set up the pane with cwd (will start interactive shell)
+          const startSuspended = window.start_suspended ? ' start_suspended=true' : '';
+          layout.push(`    pane command="${shell}"${startSuspended} {`);
           layout.push(`      name "${window.name}"`);
           layout.push(`      cwd "${substitutedRoot}"`);
           layout.push(`    }`);
@@ -167,16 +170,18 @@ export class ZellijSessionManager implements TerminalSessionManager {
             splitCommands.push(substituteVariables(cmd, vars));
           }
 
-          // Combine all commands into a single shell invocation
+          // Combine all commands into a single shell invocation, then drop to interactive shell
           if (splitCommands.length > 0) {
-            const combinedCmd = splitCommands.join(' && ');
-            layout.push(`    pane split direction="vertical" command="${shell}" {`);
+            const combinedCmd = splitCommands.join(' && ') + ' && exec $SHELL';
+            const startSuspended = window.start_suspended ? ' start_suspended=true' : '';
+            layout.push(`    pane split direction="vertical" command="${shell}"${startSuspended} {`);
             layout.push(`      cwd "${substitutedRoot}"`);
             layout.push(`      args "-c" "${escapeQuotes(combinedCmd)}"`);
             layout.push(`    }`);
           } else {
             // No commands, just set up split pane with cwd
-            layout.push(`    pane split direction="vertical" {`);
+            const startSuspended = window.start_suspended ? ' start_suspended=true' : '';
+            layout.push(`    pane split direction="vertical" command="${shell}"${startSuspended} {`);
             layout.push(`      cwd "${substitutedRoot}"`);
             layout.push(`    }`);
           }

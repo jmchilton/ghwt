@@ -49,6 +49,7 @@ export const WindowConfigSchema: z.ZodType<WindowConfig> = z
     root: z.string().optional().describe('Working directory relative to worktree root'),
     pre: z.array(z.string()).optional().describe('Commands to run before main command'),
     panes: z.array(z.string()).optional().describe('Commands to execute in this window'),
+    start_suspended: z.boolean().optional().describe('Zellij-specific: show prompt before running commands (ignored by tmux)'),
   })
   .strict()
   .describe('Terminal window configuration');

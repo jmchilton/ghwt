@@ -3,6 +3,11 @@ export interface WindowConfig {
   root?: string;
   pre?: string[];
   panes?: string[];
+  /**
+   * Zellij-specific: show prompt before running commands in this window
+   * (ignored by tmux)
+   */
+  start_suspended?: boolean;
 }
 
 export interface TabConfig {
