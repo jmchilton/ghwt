@@ -64,18 +64,36 @@ export interface TemplateVars {
 }
 
 /**
- * Check if a terminal UI application is available in PATH
+ * Check if a terminal UI application is available
  */
 export async function isUIAvailable(ui: 'wezterm' | 'ghostty' | 'none'): Promise<boolean> {
   if (ui === 'none') return true; // 'none' is always valid
 
   try {
     const { execa } = await import('execa');
-    await execa(ui, ['--help']);
+    if (ui === 'ghostty') {
+      // On macOS, ghostty is launched via `open`, check if the app exists
+      await execa('open', ['-a', 'Ghostty', '--help']);
+    } else {
+      await execa(ui, ['--help']);
+    }
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Launch ghostty with command (handles macOS requirement to use `open`)
+ */
+export async function launchGhostty(
+  args: string[],
+  options?: { stdio?: 'inherit' | 'pipe' | 'ignore' },
+): Promise<void> {
+  const { execa } = await import('execa');
+  // On macOS, must use `open -a Ghostty.app --args <args>`
+  const openArgs = ['-a', 'Ghostty', '--args', ...args];
+  await execa('open', openArgs, options);
 }
 
 /**

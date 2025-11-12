@@ -8,6 +8,7 @@ import {
   AttachOptions,
   substituteVariables,
   normalizeSessionConfig,
+  launchGhostty,
 } from './terminal-session-base.js';
 
 export class TmuxSessionManager implements TerminalSessionManager {
@@ -181,18 +182,9 @@ export class TmuxSessionManager implements TerminalSessionManager {
         sessionName,
       ]);
     } else if (ui === 'ghostty') {
-      // Ghostty: launch with class and execute tmux attach
-      await execa('ghostty', [
-        '--class',
-        sessionName,
-        '--working-directory',
-        worktreePath,
-        '--',
-        'tmux',
-        'attach-session',
-        '-t',
-        sessionName,
-      ]);
+      // Ghostty: launch with -e to execute tmux attach
+      // Working directory is inherited from tmux session
+      await launchGhostty(['-e', 'tmux', 'attach-session', '-t', sessionName]);
     } else {
       // Unknown UI, fall back to direct tmux attach
       await execa('tmux', ['attach-session', '-t', sessionName], {
@@ -240,16 +232,9 @@ export class TmuxSessionManager implements TerminalSessionManager {
           stdio: 'inherit',
         });
       } else if (ui === 'ghostty') {
-        const ghosttyArgs = ['--class', sessionName, '--working-directory', worktreePath];
-
-        // Add --new-window unless --existing-terminal flag is set
-        if (options?.alwaysNewProcess !== false) {
-          ghosttyArgs.push('--new-window');
-        }
-
-        ghosttyArgs.push('--', 'tmux', 'attach-session', '-t', sessionName);
-
-        await execa('ghostty', ghosttyArgs, {
+        // Ghostty: launch with -e to execute tmux attach
+        // --always-new-process option doesn't apply to ghostty on macOS
+        await launchGhostty(['-e', 'tmux', 'attach-session', '-t', sessionName], {
           stdio: 'inherit',
         });
       } else if (ui === 'none') {

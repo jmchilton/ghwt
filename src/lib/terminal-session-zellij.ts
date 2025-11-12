@@ -11,6 +11,7 @@ import {
   AttachOptions,
   substituteVariables,
   normalizeSessionConfig,
+  launchGhostty,
 } from './terminal-session-base.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
@@ -273,17 +274,8 @@ export class ZellijSessionManager implements TerminalSessionManager {
         shortenedName,
       ]);
     } else if (ui === 'ghostty') {
-      // Ghostty: launch with class and execute zellij attach
-      await execa('ghostty', [
-        '--class',
-        shortenedName,
-        '--working-directory',
-        worktreePath,
-        '--',
-        'zellij',
-        'attach',
-        shortenedName,
-      ]);
+      // Ghostty: launch with -e to execute zellij attach
+      await launchGhostty(['-e', 'zellij', 'attach', shortenedName]);
     } else {
       // Unknown UI, fall back to direct zellij attach
       await execa('zellij', ['attach', shortenedName], {
@@ -326,16 +318,9 @@ export class ZellijSessionManager implements TerminalSessionManager {
           stdio: 'inherit',
         });
       } else if (ui === 'ghostty') {
-        const ghosttyArgs = ['--class', shortenedName, '--working-directory', worktreePath];
-
-        // Add --new-window unless --existing-terminal flag is set
-        if (options?.alwaysNewProcess !== false) {
-          ghosttyArgs.push('--new-window');
-        }
-
-        ghosttyArgs.push('--', 'zellij', 'attach', shortenedName);
-
-        await execa('ghostty', ghosttyArgs, {
+        // Ghostty: launch with -e to execute zellij attach
+        // --always-new-process option doesn't apply to ghostty on macOS
+        await launchGhostty(['-e', 'zellij', 'attach', shortenedName], {
           stdio: 'inherit',
         });
       } else if (ui === 'none') {
