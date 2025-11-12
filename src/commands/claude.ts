@@ -8,7 +8,7 @@ export async function claudeCommand(
   project?: string,
   branch?: string,
   prompt?: string,
-  options?: { continue?: boolean },
+  options?: { continue?: boolean; verbose?: boolean },
 ): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;

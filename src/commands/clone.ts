@@ -7,8 +7,9 @@ import { createCommand } from './create.js';
 export async function cloneCommand(
   repoUrl: string,
   branchArg?: string,
-  upstreamUrl?: string,
+  options?: { upstream?: string; verbose?: boolean },
 ): Promise<void> {
+  const upstreamUrl = options?.upstream;
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const reposRoot = join(projectsRoot, config.repositoriesDir);

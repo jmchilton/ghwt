@@ -32,7 +32,12 @@ export async function ciDownloadCommand(
     }
   }
 
-  console.log(`📥 Redownloading CI artifacts for ${targetWorktrees.length} worktree(s)...\n`);
+  if (options?.verbose) {
+    console.log(`📥 Downloading CI artifacts for ${targetWorktrees.length} worktree(s)...`);
+    console.log(`📂 Artifacts directory: ${ciArtifactsDir}\n`);
+  } else {
+    console.log(`📥 Downloading CI artifacts for ${targetWorktrees.length} worktree(s)...\n`);
+  }
 
   let downloadedCount = 0;
   let skippedCount = 0;
@@ -43,8 +48,8 @@ export async function ciDownloadCommand(
     const notePath = join(vaultRoot, 'projects', wt.project, 'worktrees', wt.branch.replace(/\//g, '-') + '.md');
 
     if (!existsSync(notePath)) {
-      if (project && branch) {
-        console.log(`⚠️  Note not found: ${wt.displayName}`);
+      if (options?.verbose) {
+        console.log(`⚠️  Note not found: ${wt.displayName} (${notePath})`);
       }
       skippedCount++;
       continue;
@@ -54,7 +59,7 @@ export async function ciDownloadCommand(
     const prUrl = frontmatter.pr as string | undefined;
 
     if (!prUrl) {
-      if (project && branch) {
+      if (options?.verbose) {
         console.log(`⏭️  Not a PR: ${wt.displayName}`);
       }
       skippedCount++;
@@ -89,6 +94,8 @@ export async function ciDownloadCommand(
 
       if (options?.verbose) {
         console.log(`  🔄 ${wt.displayName}`);
+        console.log(`     PR: #${prNumber} (${ghRepo})`);
+        console.log(`     📍 Output: ${artifactsPath}`);
       }
 
       // Fetch and update metadata
@@ -104,15 +111,19 @@ export async function ciDownloadCommand(
       // Update note with new metadata
       updateNoteMetadata(notePath, ciMeta);
 
-      console.log(`✅ Redownloaded: ${wt.displayName}`);
+      if (options?.verbose) {
+        console.log(`     ✅ Status: ${ciMeta.ci_status}`);
+      }
+
+      console.log(`✅ Downloaded: ${wt.displayName}`);
       downloadedCount++;
     } catch (error) {
-      console.error(`❌ Failed to redownload ${wt.displayName}: ${error}`);
+      console.error(`❌ Failed to download ${wt.displayName}: ${error}`);
       errorCount++;
     }
   }
 
   console.log(
-    `\n📊 Redownload complete: ${downloadedCount} downloaded, ${skippedCount} skipped, ${errorCount} errors`,
+    `\n📊 Download complete: ${downloadedCount} downloaded, ${skippedCount} skipped, ${errorCount} errors`,
   );
 }

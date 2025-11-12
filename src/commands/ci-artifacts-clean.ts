@@ -5,7 +5,11 @@ import { listWorktrees } from '../lib/worktree-list.js';
 import { readNote } from '../lib/obsidian.js';
 import { getCIArtifactsPath } from '../lib/ci-artifacts.js';
 
-export async function ciCleanCommand(project?: string, branch?: string): Promise<void> {
+export async function ciCleanCommand(
+  project?: string,
+  branch?: string,
+  options?: { verbose?: boolean },
+): Promise<void> {
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
   const ciArtifactsDir = getCiArtifactsDir(config);
@@ -27,7 +31,12 @@ export async function ciCleanCommand(project?: string, branch?: string): Promise
     }
   }
 
-  console.log(`🧹 Cleaning CI artifacts for ${targetWorktrees.length} worktree(s)...\n`);
+  if (options?.verbose) {
+    console.log(`🧹 Cleaning CI artifacts for ${targetWorktrees.length} worktree(s)...`);
+    console.log(`📂 Artifacts directory: ${ciArtifactsDir}\n`);
+  } else {
+    console.log(`🧹 Cleaning CI artifacts for ${targetWorktrees.length} worktree(s)...\n`);
+  }
 
   let cleanedCount = 0;
   let skippedCount = 0;
@@ -37,9 +46,8 @@ export async function ciCleanCommand(project?: string, branch?: string): Promise
     const notePath = join(vaultRoot, 'projects', wt.project, 'worktrees', wt.branch.replace(/\//g, '-') + '.md');
 
     if (!existsSync(notePath)) {
-      if (project && branch) {
-        // Only log if explicitly targeting
-        console.log(`⚠️  Note not found: ${wt.displayName}`);
+      if (options?.verbose) {
+        console.log(`⚠️  Note not found: ${wt.displayName} (${notePath})`);
       }
       skippedCount++;
       continue;
@@ -49,7 +57,7 @@ export async function ciCleanCommand(project?: string, branch?: string): Promise
     const ciArtifactsPath = frontmatter.ci_artifacts_path as string | undefined;
 
     if (!ciArtifactsPath) {
-      if (project && branch) {
+      if (options?.verbose) {
         console.log(`⏭️  No CI artifacts: ${wt.displayName}`);
       }
       skippedCount++;
@@ -59,6 +67,9 @@ export async function ciCleanCommand(project?: string, branch?: string): Promise
     // Delete the artifact directory
     if (existsSync(ciArtifactsPath)) {
       try {
+        if (options?.verbose) {
+          console.log(`  🗑️  Deleting: ${ciArtifactsPath}`);
+        }
         rmSync(ciArtifactsPath, { recursive: true, force: true });
         console.log(`✅ Cleaned: ${wt.displayName}`);
         cleanedCount++;
@@ -66,7 +77,11 @@ export async function ciCleanCommand(project?: string, branch?: string): Promise
         console.error(`❌ Failed to clean ${wt.displayName}: ${error}`);
       }
     } else {
-      console.log(`⏭️  Artifact path not found: ${wt.displayName}`);
+      if (options?.verbose) {
+        console.log(`⏭️  Artifact path not found: ${wt.displayName} (${ciArtifactsPath})`);
+      } else {
+        console.log(`⏭️  Artifact path not found: ${wt.displayName}`);
+      }
       skippedCount++;
     }
   }

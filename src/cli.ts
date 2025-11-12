@@ -45,10 +45,10 @@ program
   .description(
     'Create a new worktree and Obsidian note\nBranch format: feature/<name>, bug/<name>, branch/<name>, or pr/<number>',
   )
-  .option('-v, --verbose', 'Show terminal multiplexer commands being executed')
-  .action(async (project, branch, cmdOptions) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await createCommand(project, branch, cmdOptions.verbose);
+      await createCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -73,9 +73,10 @@ program
   .description(
     'Remove a worktree, prune repository, and archive Obsidian note\nRun without args to pick from list, or with project to filter',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await rmCommand(project, branch);
+      await rmCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -88,9 +89,10 @@ program
     'Clone a repository and optionally create a worktree\nBranch format: feature/<name>, bug/<name>, branch/<name>, or pr/<number>',
   )
   .option('--upstream <url>', 'Upstream repository URL (e.g., for a fork)')
+  .option('-v, --verbose', 'Verbose output')
   .action(async (repoUrl, branch, options) => {
     try {
-      await cloneCommand(repoUrl, branch, options.upstream);
+      await cloneCommand(repoUrl, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -106,7 +108,7 @@ program
     '--existing-terminal',
     'Reuse existing terminal window instead of launching new wezterm process',
   )
-  .option('-v, --verbose', 'Show terminal multiplexer commands being executed')
+  .option('-v, --verbose', 'Verbose output')
   .action(async (project, branch, cmdOptions) => {
     try {
       await attachCmd(project, branch, {
@@ -139,9 +141,10 @@ program
   .description(
     'Open worktree in VS Code\nRun without args to pick from list, or with project to filter',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await codeCommand(project, branch);
+      await codeCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -153,9 +156,10 @@ program
   .description(
     'Open worktree note in Obsidian\nRun without args to pick from list, or with project to filter',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await noteCommand(project, branch);
+      await noteCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -167,9 +171,10 @@ program
   .description(
     'Open branch/PR on GitHub\nRun without args to pick from list, or with project to filter',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await ghCommand(project, branch);
+      await ghCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -182,6 +187,7 @@ program
     'Open Claude in worktree directory\nRun without args to pick from list, or with project to filter. Optional prompt or --continue flag',
   )
   .option('-c, --continue', 'Continue the most recent conversation')
+  .option('-v, --verbose', 'Verbose output')
   .action(async (project, branch, prompt, options) => {
     try {
       const promptStr = prompt && prompt.length > 0 ? prompt.join(' ') : undefined;
@@ -197,9 +203,10 @@ program
   .description(
     'Open worktree in Cursor IDE\nRun without args to pick from list, or with project to filter',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await cursorCommand(project, branch);
+      await cursorCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -238,9 +245,10 @@ program
   .description(
     'Clean downloaded CI artifacts and summaries for worktrees\nRun without args to clean all, or with project to filter',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (project, branch, options) => {
     try {
-      await ciCleanCommand(project, branch);
+      await ciCleanCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

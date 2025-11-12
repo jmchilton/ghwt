@@ -5,7 +5,11 @@ import { loadProjectPaths, getNotePath } from '../lib/paths.js';
 import { assertNoteExists } from '../lib/errors.js';
 import { getObsidianNoteUrl } from '../lib/obsidian.js';
 
-export async function noteCommand(project?: string, branch?: string): Promise<void> {
+export async function noteCommand(
+  project?: string,
+  branch?: string,
+  options?: { verbose?: boolean },
+): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
 

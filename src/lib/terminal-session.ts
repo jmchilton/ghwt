@@ -137,7 +137,7 @@ export interface AttachCommandOptions {
    */
   existingTerminal?: boolean;
   /**
-   * If true, show terminal multiplexer commands being executed.
+   * Show verbose output
    */
   verbose?: boolean;
 }

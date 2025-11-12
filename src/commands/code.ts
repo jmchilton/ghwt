@@ -4,7 +4,11 @@ import { resolveBranch } from '../lib/worktree-list.js';
 import { loadProjectPaths, getWorktreePath } from '../lib/paths.js';
 import { assertWorktreeExists } from '../lib/errors.js';
 
-export async function codeCommand(project?: string, branch?: string): Promise<void> {
+export async function codeCommand(
+  project?: string,
+  branch?: string,
+  options?: { verbose?: boolean },
+): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
 

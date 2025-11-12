@@ -27,7 +27,11 @@ function extractPRFromNote(notePath: string): string | null {
   return null;
 }
 
-export async function ghCommand(project?: string, branch?: string): Promise<void> {
+export async function ghCommand(
+  project?: string,
+  branch?: string,
+  options?: { verbose?: boolean },
+): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
 
