@@ -5,6 +5,7 @@ import { getTerminalSessionConfigDir } from './config.js';
 import { GhwtConfig } from '../types.js';
 import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager, isUIAvailable } from './terminal-session-base.js';
 import { validateSessionConfig } from './schemas.js';
+import { cleanBranchArg } from './paths.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';
 import { ZellijSessionManager } from './terminal-session-zellij.js';
 
@@ -151,7 +152,9 @@ export async function attachCommand(
   ghwtConfig?: GhwtConfig,
   attachOptions?: AttachCommandOptions,
 ): Promise<void> {
-  const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
+  // Clean branch name to match what create uses for session naming
+  const cleanBranch = cleanBranchArg(branch);
+  const sessionName = `${project}-${cleanBranch.replace(/\//g, '-')}`;
   const config = ghwtConfig || ({ terminalMultiplexer: 'tmux' } as GhwtConfig);
   const verbose = attachOptions?.verbose || false;
   const manager = getSessionManager(config, verbose);
