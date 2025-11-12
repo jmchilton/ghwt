@@ -16,7 +16,7 @@ import {
 } from './terminal-session-base.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
-  constructor(private config?: GhwtConfig) {}
+  constructor(private config?: GhwtConfig, private verbose = false) {}
 
   /**
    * Check if zellij session exists
@@ -194,6 +194,10 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     try {
       // Create session in background with layout (using spawn for detached mode)
+      if (this.verbose) {
+        console.log(`  $ zellij -s ${shortenedName} -n ${layoutPath}`);
+      }
+
       return new Promise((resolve, reject) => {
         // Open /dev/null to prevent zellij from trying to interact with terminal
         const devNull = openSync('/dev/null', 'r');
@@ -231,6 +235,9 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     if (ui === 'none') {
       // Direct zellij attach
+      if (this.verbose) {
+        console.log(`  $ zellij attach ${shortenedName}`);
+      }
       await execa('zellij', ['attach', shortenedName], {
         cwd: worktreePath,
         stdio: 'inherit',
@@ -240,6 +247,9 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     // Launch UI app with zellij attached
     if (ui === 'wezterm') {
+      if (this.verbose) {
+        console.log(`  $ wezterm start --workspace ${shortenedName} --cwd ${worktreePath} -- zellij attach ${shortenedName}`);
+      }
       await execa('wezterm', [
         'start',
         '--workspace',
@@ -253,9 +263,15 @@ export class ZellijSessionManager implements TerminalSessionManager {
       ]);
     } else if (ui === 'ghostty') {
       // Ghostty: launch with -e to execute zellij attach
+      if (this.verbose) {
+        console.log(`  $ ghostty -e zellij attach ${shortenedName}`);
+      }
       await launchGhostty(['-e', 'zellij', 'attach', shortenedName]);
     } else {
       // Unknown UI, fall back to direct zellij attach
+      if (this.verbose) {
+        console.log(`  $ zellij attach ${shortenedName}`);
+      }
       await execa('zellij', ['attach', shortenedName], {
         cwd: worktreePath,
         stdio: 'inherit',
@@ -292,23 +308,36 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
         weztermArgs.push('--', 'zellij', 'attach', shortenedName);
 
+        if (this.verbose) {
+          console.log(`  $ wezterm ${weztermArgs.join(' ')}`);
+        }
+
         await execa('wezterm', weztermArgs, {
           stdio: 'inherit',
         });
       } else if (ui === 'ghostty') {
         // Ghostty: launch with -e to execute zellij attach
         // --always-new-process option doesn't apply to ghostty on macOS
+        if (this.verbose) {
+          console.log(`  $ ghostty -e zellij attach ${shortenedName}`);
+        }
         await launchGhostty(['-e', 'zellij', 'attach', shortenedName], {
           stdio: 'inherit',
         });
       } else if (ui === 'none') {
         // Direct zellij attach
+        if (this.verbose) {
+          console.log(`  $ zellij attach ${shortenedName}`);
+        }
         await execa('zellij', ['attach', shortenedName], {
           cwd: worktreePath,
           stdio: 'inherit',
         });
       } else {
         // Unknown UI, fall back to direct zellij attach
+        if (this.verbose) {
+          console.log(`  $ zellij attach ${shortenedName}`);
+        }
         await execa('zellij', ['attach', shortenedName], {
           cwd: worktreePath,
           stdio: 'inherit',
@@ -317,6 +346,9 @@ export class ZellijSessionManager implements TerminalSessionManager {
     } catch {
       // If UI app is not available, fall back to direct zellij attach
       console.log(`📋 Attaching to session in current terminal...`);
+      if (this.verbose) {
+        console.log(`  $ zellij attach ${shortenedName}`);
+      }
       await execa('zellij', ['attach', shortenedName], {
         cwd: worktreePath,
         stdio: 'inherit',

@@ -43,9 +43,10 @@ program
   .description(
     'Create a new worktree and Obsidian note\nBranch format: feature/<name>, bug/<name>, branch/<name>, or pr/<number>',
   )
-  .action(async (project, branch) => {
+  .option('-v, --verbose', 'Show terminal multiplexer commands being executed')
+  .action(async (project, branch, cmdOptions) => {
     try {
-      await createCommand(project, branch);
+      await createCommand(project, branch, cmdOptions.verbose);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -103,10 +104,12 @@ program
     '--existing-terminal',
     'Reuse existing terminal window instead of launching new wezterm process',
   )
+  .option('-v, --verbose', 'Show terminal multiplexer commands being executed')
   .action(async (project, branch, cmdOptions) => {
     try {
       await attachCmd(project, branch, {
         existingTerminal: cmdOptions.existingTerminal,
+        verbose: cmdOptions.verbose,
       });
     } catch (error) {
       console.error('Error:', error);

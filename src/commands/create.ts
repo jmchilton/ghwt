@@ -16,7 +16,7 @@ import { loadProjectPaths, getWorktreePath, getNotePath } from '../lib/paths.js'
 import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
 
-export async function createCommand(project: string, branchArg: string): Promise<void> {
+export async function createCommand(project: string, branchArg: string, verbose = false): Promise<void> {
   const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
   const ciArtifactsDir = getCiArtifactsDir(config);
 
@@ -168,7 +168,7 @@ export async function createCommand(project: string, branchArg: string): Promise
 
   // Launch terminal session if config exists
   try {
-    await launchSession(project, branch, worktreePath, config);
+    await launchSession(project, branch, worktreePath, config, verbose);
     console.log('🖥️  Terminal session launched');
   } catch {
     console.log(`⚠️  Terminal session not configured`);

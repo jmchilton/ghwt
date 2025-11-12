@@ -68,13 +68,13 @@ export function loadSessionConfig(configPath: string): SessionConfig {
 /**
  * Get appropriate session manager based on config
  */
-function getSessionManager(config: GhwtConfig): TerminalSessionManager {
+function getSessionManager(config: GhwtConfig, verbose = false): TerminalSessionManager {
   const multiplexer = config.terminalMultiplexer || 'tmux';
 
   if (multiplexer === 'zellij') {
-    return new ZellijSessionManager(config);
+    return new ZellijSessionManager(config, verbose);
   } else {
-    return new TmuxSessionManager(config);
+    return new TmuxSessionManager(config, verbose);
   }
 }
 
@@ -87,6 +87,7 @@ export async function launchSession(
   branch: string,
   worktreePath: string,
   ghwtConfig: GhwtConfig,
+  verbose = false,
 ): Promise<void> {
   const configPath = findSessionConfig(project, ghwtConfig);
   if (!configPath) {
@@ -96,7 +97,7 @@ export async function launchSession(
 
   const config = loadSessionConfig(configPath);
   const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
-  const manager = getSessionManager(ghwtConfig);
+  const manager = getSessionManager(ghwtConfig, verbose);
 
   try {
     // Validate UI is available before creating session
@@ -133,6 +134,10 @@ export interface AttachCommandOptions {
    * If false (default), launch new wezterm process with --always-new-process.
    */
   existingTerminal?: boolean;
+  /**
+   * If true, show terminal multiplexer commands being executed.
+   */
+  verbose?: boolean;
 }
 
 /**
@@ -147,7 +152,8 @@ export async function attachCommand(
 ): Promise<void> {
   const sessionName = `${project}-${branch.replace(/\//g, '-')}`;
   const config = ghwtConfig || ({ terminalMultiplexer: 'tmux' } as GhwtConfig);
-  const manager = getSessionManager(config);
+  const verbose = attachOptions?.verbose || false;
+  const manager = getSessionManager(config, verbose);
 
   try {
     // Check if session exists
