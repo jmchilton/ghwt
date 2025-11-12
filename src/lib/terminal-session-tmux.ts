@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 import { join } from 'path';
+import { GhwtConfig } from '../types.js';
 import {
   TerminalSessionManager,
   SessionConfig,
@@ -10,6 +11,7 @@ import {
 } from './terminal-session-base.js';
 
 export class TmuxSessionManager implements TerminalSessionManager {
+  constructor(private config?: GhwtConfig) {}
   /**
    * Check if tmux session exists
    */
@@ -151,26 +153,56 @@ export class TmuxSessionManager implements TerminalSessionManager {
   }
 
   /**
-   * Launch wezterm workspace attached to tmux session
+   * Launch terminal UI app attached to tmux session
    */
   async launchUI(sessionName: string, worktreePath: string): Promise<void> {
-    // Launch wezterm with workspace, starting in worktree, attached to tmux session
-    await execa('wezterm', [
-      'start',
-      '--workspace',
-      sessionName,
-      '--cwd',
-      worktreePath,
-      '--',
-      'tmux',
-      'attach-session',
-      '-t',
-      sessionName,
-    ]);
+    const ui = this.config?.terminalUI || 'wezterm';
+
+    if (ui === 'none') {
+      // No UI app, attach directly to tmux
+      await execa('tmux', ['attach-session', '-t', sessionName], {
+        stdio: 'inherit',
+      });
+      return;
+    }
+
+    // Launch UI app with workspace, starting in worktree, attached to tmux session
+    if (ui === 'wezterm') {
+      await execa('wezterm', [
+        'start',
+        '--workspace',
+        sessionName,
+        '--cwd',
+        worktreePath,
+        '--',
+        'tmux',
+        'attach-session',
+        '-t',
+        sessionName,
+      ]);
+    } else if (ui === 'ghostty') {
+      // Ghostty: launch with class and execute tmux attach
+      await execa('ghostty', [
+        '--class',
+        sessionName,
+        '--working-directory',
+        worktreePath,
+        '--',
+        'tmux',
+        'attach-session',
+        '-t',
+        sessionName,
+      ]);
+    } else {
+      // Unknown UI, fall back to direct tmux attach
+      await execa('tmux', ['attach-session', '-t', sessionName], {
+        stdio: 'inherit',
+      });
+    }
   }
 
   /**
-   * Attach to existing tmux session in new wezterm window
+   * Attach to existing tmux session in new UI app window
    */
   async attachToSession(
     sessionName: string,
@@ -190,22 +222,49 @@ export class TmuxSessionManager implements TerminalSessionManager {
       // Session might not have other clients attached, that's fine
     }
 
-    // Launch wezterm attached to the tmux session
+    const ui = this.config?.terminalUI || 'wezterm';
+
+    // Launch UI app attached to the tmux session
     try {
-      const weztermArgs = ['start', '--workspace', sessionName, '--cwd', worktreePath];
+      if (ui === 'wezterm') {
+        const weztermArgs = ['start', '--workspace', sessionName, '--cwd', worktreePath];
 
-      // Add --always-new-process unless --existing-terminal flag is set
-      if (options?.alwaysNewProcess !== false) {
-        weztermArgs.push('--always-new-process');
+        // Add --always-new-process unless --existing-terminal flag is set
+        if (options?.alwaysNewProcess !== false) {
+          weztermArgs.push('--always-new-process');
+        }
+
+        weztermArgs.push('--', 'tmux', 'attach-session', '-t', sessionName);
+
+        await execa('wezterm', weztermArgs, {
+          stdio: 'inherit',
+        });
+      } else if (ui === 'ghostty') {
+        const ghosttyArgs = ['--class', sessionName, '--working-directory', worktreePath];
+
+        // Add --new-window unless --existing-terminal flag is set
+        if (options?.alwaysNewProcess !== false) {
+          ghosttyArgs.push('--new-window');
+        }
+
+        ghosttyArgs.push('--', 'tmux', 'attach-session', '-t', sessionName);
+
+        await execa('ghostty', ghosttyArgs, {
+          stdio: 'inherit',
+        });
+      } else if (ui === 'none') {
+        // Direct tmux attach
+        await execa('tmux', ['attach-session', '-t', sessionName], {
+          stdio: 'inherit',
+        });
+      } else {
+        // Unknown UI, fall back to direct tmux attach
+        await execa('tmux', ['attach-session', '-t', sessionName], {
+          stdio: 'inherit',
+        });
       }
-
-      weztermArgs.push('--', 'tmux', 'attach-session', '-t', sessionName);
-
-      await execa('wezterm', weztermArgs, {
-        stdio: 'inherit',
-      });
     } catch {
-      // If wezterm is not available, fall back to direct tmux attach
+      // If UI app is not available, fall back to direct tmux attach
       console.log(`📋 Attaching to session in current terminal...`);
       await execa('tmux', ['attach-session', '-t', sessionName], {
         stdio: 'inherit',

@@ -8,7 +8,7 @@ export interface GhwtConfig {
   obsidianVaultName?: string;
   shellCommandExecuteId?: string;
   terminalMultiplexer?: 'tmux' | 'zellij';
-  terminalUI?: 'wezterm' | 'none';
+  terminalUI?: 'wezterm' | 'ghostty' | 'none';
 }
 
 export interface WorktreeMetadata {

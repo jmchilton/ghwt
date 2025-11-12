@@ -28,7 +28,7 @@ export const GhwtConfigSchema = z
       .default('tmux')
       .describe('Terminal multiplexer to use for sessions'),
     terminalUI: z
-      .enum(['wezterm', 'none'])
+      .enum(['wezterm', 'ghostty', 'none'])
       .default('wezterm')
       .describe('Terminal UI application'),
     obsidianVaultName: z.string().optional().describe('Name of Obsidian vault for shell command URIs'),

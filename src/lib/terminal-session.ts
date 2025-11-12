@@ -72,9 +72,9 @@ function getSessionManager(config: GhwtConfig): TerminalSessionManager {
   const multiplexer = config.terminalMultiplexer || 'tmux';
 
   if (multiplexer === 'zellij') {
-    return new ZellijSessionManager();
+    return new ZellijSessionManager(config);
   } else {
-    return new TmuxSessionManager();
+    return new TmuxSessionManager(config);
   }
 }
 
@@ -105,15 +105,15 @@ export async function launchSession(
 
     // Launch UI based on config
     const ui = ghwtConfig.terminalUI || 'wezterm';
-    if (ui === 'wezterm') {
-      // For tmux: launch wezterm which wraps tmux
-      // For zellij: launch wezterm which wraps zellij
+    if (ui === 'wezterm' || ui === 'ghostty') {
+      // For tmux: launch UI app which wraps tmux
+      // For zellij: launch UI app which wraps zellij
       if (ghwtConfig.terminalMultiplexer === 'zellij') {
-        // Zellij already running, open in wezterm
+        // Zellij already running, open in UI app
         const { execa } = await import('execa');
-        await execa('wezterm', ['start', '--workspace', sessionName, '--cwd', worktreePath]);
+        await execa(ui, ['--class', sessionName, '--cwd', worktreePath]);
       } else {
-        // Tmux: use existing launchUI which launches wezterm
+        // Tmux: use existing launchUI which launches UI app
         await manager.launchUI(sessionName, worktreePath);
       }
     } else {
@@ -157,10 +157,10 @@ export async function attachCommand(
       throw new Error(`Session not found: ${sessionName}`);
     }
 
-    // Handle WezTerm UI mode for tmux (detach other clients first)
+    // Handle UI app mode for tmux (detach other clients first)
     const ui = config.terminalUI || 'wezterm';
-    if (ui === 'wezterm' && config.terminalMultiplexer !== 'zellij') {
-      // For tmux with wezterm UI: detach other clients before attaching
+    if ((ui === 'wezterm' || ui === 'ghostty') && config.terminalMultiplexer !== 'zellij') {
+      // For tmux with UI app: detach other clients before attaching
       const { execa } = await import('execa');
       try {
         await execa('tmux', ['detach-client', '-s', sessionName]);

@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import { join } from 'path';
 import { mkdirSync, writeFileSync, openSync } from 'fs';
 import { createHash } from 'crypto';
+import { GhwtConfig } from '../types.js';
 import {
   TerminalSessionManager,
   SessionConfig,
@@ -13,6 +14,7 @@ import {
 } from './terminal-session-base.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
+  constructor(private config?: GhwtConfig) {}
   /**
    * Shorten session name for zellij (max ~25 chars to be safe)
    * Uses abbreviations: galaxy-architecture -> ga, feature/implement -> fi
@@ -242,12 +244,13 @@ export class ZellijSessionManager implements TerminalSessionManager {
   }
 
   /**
-   * Launch zellij directly (native UI) or via wezterm
+   * Launch zellij directly (native UI)
    */
   async launchUI(sessionName: string, worktreePath: string): Promise<void> {
     const shortenedName = this.shortenSessionName(sessionName);
 
     // Simply attach to the session - zellij will use its native UI
+    // UI app setting is handled in terminal-session.ts for zellij
     await execa('zellij', ['attach', shortenedName], {
       cwd: worktreePath,
       stdio: 'inherit',
@@ -269,22 +272,51 @@ export class ZellijSessionManager implements TerminalSessionManager {
       throw new Error(`Zellij session not found: ${sessionName}`);
     }
 
-    // Try to launch WezTerm with zellij attached
+    const ui = this.config?.terminalUI || 'wezterm';
+
+    // Try to launch UI app with zellij attached
     try {
-      const weztermArgs = ['start', '--workspace', shortenedName, '--cwd', worktreePath];
+      if (ui === 'wezterm') {
+        const weztermArgs = ['start', '--workspace', shortenedName, '--cwd', worktreePath];
 
-      // Add --always-new-process unless --existing-terminal flag is set
-      if (options?.alwaysNewProcess !== false) {
-        weztermArgs.push('--always-new-process');
+        // Add --always-new-process unless --existing-terminal flag is set
+        if (options?.alwaysNewProcess !== false) {
+          weztermArgs.push('--always-new-process');
+        }
+
+        weztermArgs.push('--', 'zellij', 'attach', shortenedName);
+
+        await execa('wezterm', weztermArgs, {
+          stdio: 'inherit',
+        });
+      } else if (ui === 'ghostty') {
+        const ghosttyArgs = ['--class', shortenedName, '--working-directory', worktreePath];
+
+        // Add --new-window unless --existing-terminal flag is set
+        if (options?.alwaysNewProcess !== false) {
+          ghosttyArgs.push('--new-window');
+        }
+
+        ghosttyArgs.push('--', 'zellij', 'attach', shortenedName);
+
+        await execa('ghostty', ghosttyArgs, {
+          stdio: 'inherit',
+        });
+      } else if (ui === 'none') {
+        // Direct zellij attach
+        await execa('zellij', ['attach', shortenedName], {
+          cwd: worktreePath,
+          stdio: 'inherit',
+        });
+      } else {
+        // Unknown UI, fall back to direct zellij attach
+        await execa('zellij', ['attach', shortenedName], {
+          cwd: worktreePath,
+          stdio: 'inherit',
+        });
       }
-
-      weztermArgs.push('--', 'zellij', 'attach', shortenedName);
-
-      await execa('wezterm', weztermArgs, {
-        stdio: 'inherit',
-      });
     } catch {
-      // If wezterm is not available, fall back to direct zellij attach
+      // If UI app is not available, fall back to direct zellij attach
       console.log(`📋 Attaching to session in current terminal...`);
       await execa('zellij', ['attach', shortenedName], {
         cwd: worktreePath,
