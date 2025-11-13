@@ -478,7 +478,9 @@ export async function lintCommand(options?: {
     const sessionDir = config.zellijSessionsDir || '.zellij-sessions';
     const sessionsRoot = join(projectsRoot, sessionDir);
 
-    if (existsSync(sessionsRoot)) {
+    if (!existsSync(sessionsRoot)) {
+      result.warnings.push(`Zellij sessions directory not found: ${sessionsRoot}`);
+    } else {
       let orphanSessions = 0;
 
       const projectDirs = readdirSync(sessionsRoot).filter((name) => {
