@@ -42,10 +42,13 @@ export function shouldFetchArtifacts(
   worktree: Partial<WorktreeMetadata>,
   prChecks: string | undefined,
 ): boolean {
-  // Fetch if PR is failing OR no CI data exists yet
+  // Fetch if PR is failing OR no CI data exists yet OR artifact path doesn't exist
   const isFailing = prChecks === 'failing';
   const noCIData = !worktree.ci_last_synced;
-  return isFailing || noCIData;
+  const artifactsMissing =
+    worktree.ci_artifacts_path &&
+    !existsSync(worktree.ci_artifacts_path as string);
+  return isFailing || noCIData || !!artifactsMissing;
 }
 
 export function needsFullFetch(worktree: Partial<WorktreeMetadata>, currentSha: string): boolean {
