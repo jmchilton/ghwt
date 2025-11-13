@@ -1,5 +1,4 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -104,7 +103,13 @@ describe('--this flag: getCurrentWorktreeContext', () => {
     branchType: 'branch' | 'pr',
     name: string,
   ): Promise<string> {
-    const worktreePath = getWorktreePath(projectsRoot, createTestConfig(projectsRoot), projectName, branchType, name);
+    const worktreePath = getWorktreePath(
+      projectsRoot,
+      createTestConfig(projectsRoot),
+      projectName,
+      branchType,
+      name,
+    );
     mkdirSync(worktreePath, { recursive: true });
 
     const repoPath = join(reposRoot, projectName);
@@ -131,8 +136,8 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       process.chdir(worktreePath);
       const context = await getCurrentWorktreeContext();
 
-      assert.strictEqual(context.project, 'galaxy');
-      assert.strictEqual(context.branch, 'branch/cool-feature');
+      expect(context.project).toBe('galaxy');
+      expect(context.branch).toBe('branch/cool-feature');
     } finally {
       process.chdir(cwd);
     }
@@ -147,8 +152,8 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       process.chdir(worktreePath);
       const context = await getCurrentWorktreeContext();
 
-      assert.strictEqual(context.project, 'galaxy');
-      assert.strictEqual(context.branch, 'pr/1234');
+      expect(context.project).toBe('galaxy');
+      expect(context.branch).toBe('pr/1234');
     } finally {
       process.chdir(cwd);
     }
@@ -167,8 +172,8 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       process.chdir(deepPath);
       const context = await getCurrentWorktreeContext();
 
-      assert.strictEqual(context.project, 'galaxy');
-      assert.strictEqual(context.branch, 'branch/cool-feature');
+      expect(context.project).toBe('galaxy');
+      expect(context.branch).toBe('branch/cool-feature');
     } finally {
       process.chdir(cwd);
     }
@@ -183,8 +188,8 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       process.chdir(worktreePath);
       const context = await getCurrentWorktreeContext();
 
-      assert.strictEqual(context.project, 'galaxy');
-      assert.strictEqual(context.branch, 'branch/feature/awesome-stuff');
+      expect(context.project).toBe('galaxy');
+      expect(context.branch).toBe('branch/feature/awesome-stuff');
     } finally {
       process.chdir(cwd);
     }
@@ -196,12 +201,9 @@ describe('--this flag: getCurrentWorktreeContext', () => {
     const cwd = process.cwd();
     try {
       process.chdir(outsideDir);
-      await assert.rejects(
-        async () => {
-          await getCurrentWorktreeContext();
-        },
-        /Not in a ghwt worktree directory/,
-      );
+      await expect(async () => {
+        await getCurrentWorktreeContext();
+      }).rejects.toThrow(/Not in a ghwt worktree directory/);
     } finally {
       process.chdir(cwd);
       rmSync(outsideDir, { recursive: true });
@@ -220,14 +222,14 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       // Check galaxy project
       process.chdir(galaxyWorktree);
       let context = await getCurrentWorktreeContext();
-      assert.strictEqual(context.project, 'galaxy');
-      assert.strictEqual(context.branch, 'branch/feat1');
+      expect(context.project).toBe('galaxy');
+      expect(context.branch).toBe('branch/feat1');
 
       // Check other project
       process.chdir(otherWorktree);
       context = await getCurrentWorktreeContext();
-      assert.strictEqual(context.project, 'other-project');
-      assert.strictEqual(context.branch, 'branch/feat2');
+      expect(context.project).toBe('other-project');
+      expect(context.branch).toBe('branch/feat2');
     } finally {
       process.chdir(cwd);
     }
@@ -249,8 +251,8 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       for (const testPath of [level3, level2, level1, worktreePath]) {
         process.chdir(testPath);
         const context = await getCurrentWorktreeContext();
-        assert.strictEqual(context.project, 'galaxy');
-        assert.strictEqual(context.branch, 'branch/cool-feature');
+        expect(context.project).toBe('galaxy');
+        expect(context.branch).toBe('branch/cool-feature');
       }
     } finally {
       process.chdir(cwd);
@@ -268,17 +270,17 @@ describe('--this flag: getCurrentWorktreeContext', () => {
       // Check feature1
       process.chdir(feat1);
       let context = await getCurrentWorktreeContext();
-      assert.strictEqual(context.branch, 'branch/feature1');
+      expect(context.branch).toBe('branch/feature1');
 
       // Check feature2
       process.chdir(feat2);
       context = await getCurrentWorktreeContext();
-      assert.strictEqual(context.branch, 'branch/feature2');
+      expect(context.branch).toBe('branch/feature2');
 
       // Check PR
       process.chdir(pr100);
       context = await getCurrentWorktreeContext();
-      assert.strictEqual(context.branch, 'pr/100');
+      expect(context.branch).toBe('pr/100');
     } finally {
       process.chdir(cwd);
     }

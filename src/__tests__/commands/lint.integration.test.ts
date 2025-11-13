@@ -1,5 +1,4 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -141,7 +140,7 @@ describe('Lint command: end-to-end configuration validation', () => {
       }
     }
 
-    assert.ok(errorThrown, 'Expected process.exit to be called for missing directories');
+    expect(errorThrown).toBeTruthy();
   });
 
   it('validates valid session config YAML', async () => {
@@ -207,7 +206,7 @@ name: test-session
       }
     }
 
-    assert.ok(errorThrown, 'Expected process.exit to be called for invalid session config');
+    expect(errorThrown).toBeTruthy();
   });
 
   it('detects missing session config directory warning', async () => {
@@ -299,7 +298,7 @@ branch: cool-feature
       }
     }
 
-    assert.ok(errorThrown, 'Expected process.exit to be called for missing note fields');
+    expect(errorThrown).toBeTruthy();
   });
 
   it('supports --config-only option', async () => {
@@ -410,7 +409,10 @@ last_synced: 2024-11-13T10:00:00Z
         },
       ],
     };
-    writeFileSync(join(sessionConfigDir, 'test.ghwt-session.json'), JSON.stringify(jsonSessionConfig));
+    writeFileSync(
+      join(sessionConfigDir, 'test.ghwt-session.json'),
+      JSON.stringify(jsonSessionConfig),
+    );
 
     const config = createTestConfig(projectsRoot, vaultPath);
     saveTestConfig(config);
@@ -495,10 +497,7 @@ last_synced: 2024-11-13T10:00:00Z
     for (const project of projects) {
       const projectNotesDir = join(vaultPath, 'projects', project, 'worktrees');
       mkdirSync(projectNotesDir, { recursive: true });
-      writeFileSync(
-        join(projectNotesDir, 'feature.md'),
-        baseNote.replace(/PROJECT/g, project),
-      );
+      writeFileSync(join(projectNotesDir, 'feature.md'), baseNote.replace(/PROJECT/g, project));
     }
 
     const config = createTestConfig(projectsRoot, vaultPath);
@@ -543,7 +542,7 @@ windows:
       }
     }
 
-    assert.ok(errorThrown, 'Expected process.exit to be called for malformed YAML');
+    expect(errorThrown).toBeTruthy();
   });
 
   it('detects invalid config JSON format', async () => {
@@ -568,6 +567,6 @@ windows:
       }
     }
 
-    assert.ok(errorThrown, 'Expected process.exit to be called for invalid JSON');
+    expect(errorThrown).toBeTruthy();
   });
 });

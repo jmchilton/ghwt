@@ -1,5 +1,4 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { mkdtempSync, rmSync, readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -48,11 +47,11 @@ describe('Init command: end-to-end workspace initialization', () => {
     });
 
     // Verify all required directories exist
-    assert.ok(existsSync(join(projectsRoot, 'repositories')));
-    assert.ok(existsSync(join(projectsRoot, 'worktrees')));
-    assert.ok(existsSync(join(projectsRoot, 'ci-artifacts-config')));
-    assert.ok(existsSync(join(projectsRoot, 'terminal-session-config')));
-    assert.ok(existsSync(join(vaultPath, 'templates')));
+    expect(existsSync(join(projectsRoot, 'repositories'))).toBeTruthy();
+    expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
+    expect(existsSync(join(projectsRoot, 'ci-artifacts-config'))).toBeTruthy();
+    expect(existsSync(join(projectsRoot, 'terminal-session-config'))).toBeTruthy();
+    expect(existsSync(join(vaultPath, 'templates'))).toBeTruthy();
   });
 
   it('creates config file with correct structure', async () => {
@@ -65,17 +64,17 @@ describe('Init command: end-to-end workspace initialization', () => {
     });
 
     // Verify config file exists
-    assert.ok(existsSync(configPath), 'Config file should exist');
+    expect(existsSync(configPath)).toBeTruthy();
 
     // Parse and verify config content
     const configContent = readFileSync(configPath, 'utf-8');
     const config: GhwtConfig = JSON.parse(configContent);
 
-    assert.strictEqual(config.projectsRoot, projectsRoot);
-    assert.strictEqual(config.vaultPath, vaultPath);
-    assert.strictEqual(config.repositoriesDir, 'repositories');
-    assert.strictEqual(config.worktreesDir, 'worktrees');
-    assert.strictEqual(config.syncInterval, null);
+    expect(config.projectsRoot).toBe(projectsRoot);
+    expect(config.vaultPath).toBe(vaultPath);
+    expect(config.repositoriesDir).toBe('repositories');
+    expect(config.worktreesDir).toBe('worktrees');
+    expect(config.syncInterval).toBe(null);
   });
 
   it('creates dashboard template in vault', async () => {
@@ -90,15 +89,15 @@ describe('Init command: end-to-end workspace initialization', () => {
     const dashboardPath = join(vaultPath, 'dashboard.md');
 
     // Verify dashboard exists
-    assert.ok(existsSync(dashboardPath), 'Dashboard should exist');
+    expect(existsSync(dashboardPath)).toBeTruthy();
 
     // Verify dashboard content
     const dashboardContent = readFileSync(dashboardPath, 'utf-8');
-    assert.ok(dashboardContent.includes('Development Dashboard'));
-    assert.ok(dashboardContent.includes('Active Work'));
-    assert.ok(dashboardContent.includes('Needs Attention'));
-    assert.ok(dashboardContent.includes('Ready to Merge'));
-    assert.ok(dashboardContent.includes('dataview'));
+    expect(dashboardContent.includes('Development Dashboard')).toBeTruthy();
+    expect(dashboardContent.includes('Active Work')).toBeTruthy();
+    expect(dashboardContent.includes('Needs Attention')).toBeTruthy();
+    expect(dashboardContent.includes('Ready to Merge')).toBeTruthy();
+    expect(dashboardContent.includes('dataview')).toBeTruthy();
   });
 
   it('dashboard contains dataview queries', async () => {
@@ -114,10 +113,10 @@ describe('Init command: end-to-end workspace initialization', () => {
     const dashboardContent = readFileSync(dashboardPath, 'utf-8');
 
     // Verify key dataview queries exist
-    assert.ok(dashboardContent.includes('FROM "projects"'));
-    assert.ok(dashboardContent.includes('status != "merged"'));
-    assert.ok(dashboardContent.includes('pr_checks = "failing"'));
-    assert.ok(dashboardContent.includes('days_since_activity > 7'));
+    expect(dashboardContent.includes('FROM "projects"')).toBeTruthy();
+    expect(dashboardContent.includes('status != "merged"')).toBeTruthy();
+    expect(dashboardContent.includes('pr_checks = "failing"')).toBeTruthy();
+    expect(dashboardContent.includes('days_since_activity > 7')).toBeTruthy();
   });
 
   it('is idempotent - can run twice without errors', async () => {
@@ -141,11 +140,11 @@ describe('Init command: end-to-end workspace initialization', () => {
     const secondDirs = readdirSync(projectsRoot);
 
     // Verify same directories exist after second run
-    assert.deepStrictEqual(firstDirs, secondDirs);
+    expect(firstDirs).toEqual(secondDirs);
 
     // Verify directories still exist
-    assert.ok(existsSync(join(projectsRoot, 'repositories')));
-    assert.ok(existsSync(join(projectsRoot, 'worktrees')));
+    expect(existsSync(join(projectsRoot, 'repositories'))).toBeTruthy();
+    expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
   });
 
   it('handles custom project paths with ~ expansion', async () => {
@@ -159,8 +158,8 @@ describe('Init command: end-to-end workspace initialization', () => {
       vaultPath,
     });
 
-    assert.ok(existsSync(join(customRoot, 'repositories')));
-    assert.ok(existsSync(join(customRoot, 'worktrees')));
+    expect(existsSync(join(customRoot, 'repositories'))).toBeTruthy();
+    expect(existsSync(join(customRoot, 'worktrees'))).toBeTruthy();
   });
 
   it('handles custom vault paths', async () => {
@@ -172,8 +171,8 @@ describe('Init command: end-to-end workspace initialization', () => {
       vaultPath: customVault,
     });
 
-    assert.ok(existsSync(join(customVault, 'templates')));
-    assert.ok(existsSync(join(customVault, 'dashboard.md')));
+    expect(existsSync(join(customVault, 'templates'))).toBeTruthy();
+    expect(existsSync(join(customVault, 'dashboard.md'))).toBeTruthy();
   });
 
   it('creates nested vault directory structure if needed', async () => {
@@ -186,8 +185,8 @@ describe('Init command: end-to-end workspace initialization', () => {
       vaultPath,
     });
 
-    assert.ok(existsSync(vaultPath));
-    assert.ok(existsSync(join(vaultPath, 'templates')));
+    expect(existsSync(vaultPath)).toBeTruthy();
+    expect(existsSync(join(vaultPath, 'templates'))).toBeTruthy();
   });
 
   it('creates all ci-artifacts-config and terminal-session-config directories', async () => {
@@ -200,8 +199,8 @@ describe('Init command: end-to-end workspace initialization', () => {
     });
 
     // These directories are needed for configuration files
-    assert.ok(existsSync(join(projectsRoot, 'ci-artifacts-config')));
-    assert.ok(existsSync(join(projectsRoot, 'terminal-session-config')));
+    expect(existsSync(join(projectsRoot, 'ci-artifacts-config'))).toBeTruthy();
+    expect(existsSync(join(projectsRoot, 'terminal-session-config'))).toBeTruthy();
   });
 
   it('config file uses correct paths in JSON', async () => {
@@ -216,10 +215,10 @@ describe('Init command: end-to-end workspace initialization', () => {
     const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
 
     // Verify paths are absolute and correct
-    assert.ok(configContent.projectsRoot === projectsRoot);
-    assert.ok(configContent.vaultPath === vaultPath);
-    assert.ok(configContent.repositoriesDir === 'repositories');
-    assert.ok(configContent.worktreesDir === 'worktrees');
+    expect(configContent.projectsRoot === projectsRoot).toBeTruthy();
+    expect(configContent.vaultPath === vaultPath).toBeTruthy();
+    expect(configContent.repositoriesDir === 'repositories').toBeTruthy();
+    expect(configContent.worktreesDir === 'worktrees').toBeTruthy();
   });
 
   it('creates workspace structure matching expected hierarchy', async () => {
@@ -233,14 +232,14 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     // Verify complete directory structure
     const projectsContents = readdirSync(projectsRoot).sort();
-    assert.ok(projectsContents.includes('ci-artifacts-config'));
-    assert.ok(projectsContents.includes('repositories'));
-    assert.ok(projectsContents.includes('terminal-session-config'));
-    assert.ok(projectsContents.includes('worktrees'));
+    expect(projectsContents.includes('ci-artifacts-config')).toBeTruthy();
+    expect(projectsContents.includes('repositories')).toBeTruthy();
+    expect(projectsContents.includes('terminal-session-config')).toBeTruthy();
+    expect(projectsContents.includes('worktrees')).toBeTruthy();
 
     const vaultContents = readdirSync(vaultPath).sort();
-    assert.ok(vaultContents.includes('dashboard.md'));
-    assert.ok(vaultContents.includes('templates'));
+    expect(vaultContents.includes('dashboard.md')).toBeTruthy();
+    expect(vaultContents.includes('templates')).toBeTruthy();
   });
 
   it('dashboard frontmatter has correct metadata', async () => {
@@ -256,9 +255,9 @@ describe('Init command: end-to-end workspace initialization', () => {
     const dashboardContent = readFileSync(dashboardPath, 'utf-8');
 
     // Verify frontmatter structure
-    assert.ok(dashboardContent.startsWith('---'));
-    assert.ok(dashboardContent.includes('type: dashboard'));
-    assert.ok(dashboardContent.includes('created:'));
+    expect(dashboardContent.startsWith('---')).toBeTruthy();
+    expect(dashboardContent.includes('type: dashboard')).toBeTruthy();
+    expect(dashboardContent.includes('created:')).toBeTruthy();
   });
 
   it('multiple concurrent initializations with same paths work correctly', async () => {
@@ -272,9 +271,9 @@ describe('Init command: end-to-end workspace initialization', () => {
     ]);
 
     // Verify structure is intact
-    assert.ok(existsSync(join(projectsRoot, 'repositories')));
-    assert.ok(existsSync(join(projectsRoot, 'worktrees')));
-    assert.ok(existsSync(join(vaultPath, 'dashboard.md')));
+    expect(existsSync(join(projectsRoot, 'repositories'))).toBeTruthy();
+    expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
+    expect(existsSync(join(vaultPath, 'dashboard.md'))).toBeTruthy();
   });
 
   it('preserves existing directories without errors', async () => {
@@ -298,8 +297,8 @@ describe('Init command: end-to-end workspace initialization', () => {
     });
 
     // Verify file still exists
-    assert.ok(existsSync(testFile));
+    expect(existsSync(testFile)).toBeTruthy();
     const content = readFileSync(testFile, 'utf-8');
-    assert.strictEqual(content, 'test content');
+    expect(content).toBe('test content');
   });
 });

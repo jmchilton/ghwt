@@ -1,5 +1,4 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, expect } from 'vitest';
 import { mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -44,34 +43,26 @@ describe('worktree-list', () => {
       const worktrees = listWorktrees();
 
       // Verify discovery
-      assert.strictEqual(worktrees.length, 3);
+      expect(worktrees.length).toBe(3);
 
       // Verify branch worktree
       const branchWt = worktrees.find(
         (w) => w.project === 'galaxy' && w.branch === 'branch/cool-feature',
       );
-      assert.ok(branchWt);
-      assert.strictEqual(
-        branchWt.path,
-        join(worktreesDir, 'galaxy', 'branch', 'cool-feature'),
-      );
+      expect(branchWt).toBeTruthy();
+      expect(branchWt?.path).toBe(join(worktreesDir, 'galaxy', 'branch', 'cool-feature'));
 
       // Verify PR worktree
-      const prWt = worktrees.find(
-        (w) => w.project === 'galaxy' && w.branch === 'pr/1234',
-      );
-      assert.ok(prWt);
-      assert.strictEqual(prWt.path, join(worktreesDir, 'galaxy', 'pr', '1234'));
+      const prWt = worktrees.find((w) => w.project === 'galaxy' && w.branch === 'pr/1234');
+      expect(prWt).toBeTruthy();
+      expect(prWt?.path).toBe(join(worktreesDir, 'galaxy', 'pr', '1234'));
 
       // Verify second project
       const gxWt = worktrees.find(
         (w) => w.project === 'gxformat2' && w.branch === 'branch/test-branch',
       );
-      assert.ok(gxWt);
-      assert.strictEqual(
-        gxWt.path,
-        join(worktreesDir, 'gxformat2', 'branch', 'test-branch'),
-      );
+      expect(gxWt).toBeTruthy();
+      expect(gxWt?.path).toBe(join(worktreesDir, 'gxformat2', 'branch', 'test-branch'));
     } finally {
       delete process.env.GHWT_CONFIG;
       rmSync(testRoot, { recursive: true, force: true });
@@ -104,7 +95,7 @@ describe('worktree-list', () => {
 
       // Resolve branch name
       const resolved = resolveBranch('galaxy', 'cool-feature');
-      assert.strictEqual(resolved, 'branch/cool-feature');
+      expect(resolved).toBe('branch/cool-feature');
     } finally {
       delete process.env.GHWT_CONFIG;
       rmSync(testRoot, { recursive: true, force: true });
@@ -137,7 +128,7 @@ describe('worktree-list', () => {
 
       // Resolve PR number
       const resolved = resolveBranch('galaxy', '1234');
-      assert.strictEqual(resolved, 'pr/1234');
+      expect(resolved).toBe('pr/1234');
     } finally {
       delete process.env.GHWT_CONFIG;
       rmSync(testRoot, { recursive: true, force: true });
@@ -170,7 +161,7 @@ describe('worktree-list', () => {
 
       // Resolve non-existent branch
       const resolved = resolveBranch('galaxy', 'nonexistent');
-      assert.strictEqual(resolved, 'nonexistent');
+      expect(resolved).toBe('nonexistent');
     } finally {
       delete process.env.GHWT_CONFIG;
       rmSync(testRoot, { recursive: true, force: true });
@@ -199,7 +190,7 @@ describe('worktree-list', () => {
       process.env.GHWT_CONFIG = configPath;
 
       const worktrees = listWorktrees();
-      assert.strictEqual(worktrees.length, 0);
+      expect(worktrees.length).toBe(0);
     } finally {
       delete process.env.GHWT_CONFIG;
       rmSync(testRoot, { recursive: true, force: true });
@@ -236,8 +227,8 @@ describe('worktree-list', () => {
 
       // List only galaxy worktrees
       const worktrees = listWorktrees('galaxy');
-      assert.strictEqual(worktrees.length, 1);
-      assert.strictEqual(worktrees[0].project, 'galaxy');
+      expect(worktrees.length).toBe(1);
+      expect(worktrees[0].project).toBe('galaxy');
     } finally {
       delete process.env.GHWT_CONFIG;
       rmSync(testRoot, { recursive: true, force: true });
@@ -246,6 +237,6 @@ describe('worktree-list', () => {
 
   it('worktree-list module loads', () => {
     // Ensure module compiles
-    assert.ok(true);
+    expect(true).toBeTruthy();
   });
 });

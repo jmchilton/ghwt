@@ -1,5 +1,4 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -124,7 +123,13 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
     branchType: 'branch' | 'pr',
     name: string,
   ): Promise<string> {
-    const worktreePath = getWorktreePath(projectsRoot, createTestConfig(projectsRoot), projectName, branchType, name);
+    const worktreePath = getWorktreePath(
+      projectsRoot,
+      createTestConfig(projectsRoot),
+      projectName,
+      branchType,
+      name,
+    );
     mkdirSync(worktreePath, { recursive: true });
 
     const repoPath = join(projectsRoot, 'repositories', projectName);
@@ -142,7 +147,11 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
     return worktreePath;
   }
 
-  function setupCIArtifacts(projectName: string, branchType: 'branch' | 'pr', name: string): string {
+  function setupCIArtifacts(
+    projectName: string,
+    branchType: 'branch' | 'pr',
+    name: string,
+  ): string {
     const artifactsPath = join(projectsRoot, 'ci-artifacts', projectName, branchType, name);
     mkdirSync(artifactsPath, { recursive: true });
     writeFileSync(join(artifactsPath, 'summary.json'), JSON.stringify({ status: 'complete' }));
@@ -158,8 +167,8 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
       consoleLogOutput = [];
       await pathCiArtifactsCommand('galaxy', 'branch/cool-feature', { verbose: false });
 
-      assert.strictEqual(consoleLogOutput.length, 1);
-      assert.strictEqual(consoleLogOutput[0], artifactsPath);
+      expect(consoleLogOutput.length).toBe(1);
+      expect(consoleLogOutput[0]).toBe(artifactsPath);
     });
 
     it('outputs nothing when artifacts do not exist', async () => {
@@ -169,7 +178,7 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
       consoleLogOutput = [];
       await pathCiArtifactsCommand('galaxy', 'branch/cool-feature', { verbose: false });
 
-      assert.strictEqual(consoleLogOutput.length, 0);
+      expect(consoleLogOutput.length).toBe(0);
     });
 
     it('outputs correct path for PR worktree', async () => {
@@ -180,8 +189,8 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
       consoleLogOutput = [];
       await pathCiArtifactsCommand('galaxy', 'pr/1234', { verbose: false });
 
-      assert.strictEqual(consoleLogOutput.length, 1);
-      assert.strictEqual(consoleLogOutput[0], artifactsPath);
+      expect(consoleLogOutput.length).toBe(1);
+      expect(consoleLogOutput[0]).toBe(artifactsPath);
     });
 
     it('outputs correct path when using --this flag from within worktree', async () => {
@@ -195,8 +204,8 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
         process.chdir(worktreePath);
         await pathCiArtifactsCommand(undefined, undefined, { this: true, verbose: false });
 
-        assert.strictEqual(consoleLogOutput.length, 1);
-        assert.strictEqual(consoleLogOutput[0], artifactsPath);
+        expect(consoleLogOutput.length).toBe(1);
+        expect(consoleLogOutput[0]).toBe(artifactsPath);
       } finally {
         process.chdir(cwd);
       }
@@ -226,7 +235,7 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
         }
 
         // Verify that process.exit was called (indicates error was handled)
-        assert.strictEqual(exitCalled, true);
+        expect(exitCalled).toBe(true);
       } finally {
         process.exit = originalExit;
         process.chdir(cwd);
@@ -243,8 +252,10 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
       consoleLogOutput = [];
       await pathNoteCommand('galaxy', 'branch/cool-feature', { verbose: false });
 
-      assert.strictEqual(consoleLogOutput.length, 1);
-      assert(consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/cool-feature.md'));
+      expect(consoleLogOutput.length).toBe(1);
+      expect(
+        consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/cool-feature.md'),
+      ).toBeTruthy();
     });
 
     it('outputs correct path for PR worktree', async () => {
@@ -254,8 +265,8 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
       consoleLogOutput = [];
       await pathNoteCommand('galaxy', 'pr/1234', { verbose: false });
 
-      assert.strictEqual(consoleLogOutput.length, 1);
-      assert(consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/1234.md'));
+      expect(consoleLogOutput.length).toBe(1);
+      expect(consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/1234.md')).toBeTruthy();
     });
 
     it('outputs correct path when using --this flag from within worktree', async () => {
@@ -268,8 +279,10 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
         process.chdir(worktreePath);
         await pathNoteCommand(undefined, undefined, { this: true, verbose: false });
 
-        assert.strictEqual(consoleLogOutput.length, 1);
-        assert(consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/cool-feature.md'));
+        expect(consoleLogOutput.length).toBe(1);
+        expect(
+          consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/cool-feature.md'),
+        ).toBeTruthy();
       } finally {
         process.chdir(cwd);
       }
@@ -282,8 +295,10 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
       consoleLogOutput = [];
       await pathNoteCommand('galaxy', 'branch/feature/awesome-stuff', { verbose: false });
 
-      assert.strictEqual(consoleLogOutput.length, 1);
-      assert(consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/feature-awesome-stuff.md'));
+      expect(consoleLogOutput.length).toBe(1);
+      expect(
+        consoleLogOutput[0].includes('vault/projects/galaxy/worktrees/feature-awesome-stuff.md'),
+      ).toBeTruthy();
     });
 
     it('errors when using --this flag from outside worktree', async () => {
@@ -310,7 +325,7 @@ describe('path commands: pathCiArtifactsCommand and pathNoteCommand', () => {
         }
 
         // Verify that process.exit was called (indicates error was handled)
-        assert.strictEqual(exitCalled, true);
+        expect(exitCalled).toBe(true);
       } finally {
         process.exit = originalExit;
         process.chdir(cwd);

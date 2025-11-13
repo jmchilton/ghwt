@@ -1,5 +1,4 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -96,7 +95,13 @@ describe('Integration: Create → List → Remove workflow', () => {
     branchType: 'branch' | 'pr',
     name: string,
   ): Promise<string> {
-    const worktreePath = getWorktreePath(projectsRoot, createTestConfig(projectsRoot), projectName, branchType, name);
+    const worktreePath = getWorktreePath(
+      projectsRoot,
+      createTestConfig(projectsRoot),
+      projectName,
+      branchType,
+      name,
+    );
     mkdirSync(worktreePath, { recursive: true });
 
     // Initialize git worktree
@@ -122,12 +127,12 @@ describe('Integration: Create → List → Remove workflow', () => {
     const worktreePath = await setupWorktree('test-project', 'branch', 'cool-feature');
 
     // Verify directory structure
-    assert.ok(existsSync(worktreePath));
-    assert.ok(existsSync(join(worktreePath, '.git')));
+    expect(existsSync(worktreePath)).toBeTruthy();
+    expect(existsSync(join(worktreePath, '.git'))).toBeTruthy();
 
     // Verify expected path
     const expectedPath = join(projectsRoot, 'worktrees', 'test-project', 'branch', 'cool-feature');
-    assert.strictEqual(worktreePath, expectedPath);
+    expect(worktreePath).toBe(expectedPath);
   });
 
   it('creates worktree in new hierarchy (PR type)', async () => {
@@ -135,12 +140,12 @@ describe('Integration: Create → List → Remove workflow', () => {
     const worktreePath = await setupWorktree('test-project', 'pr', '1234');
 
     // Verify directory structure
-    assert.ok(existsSync(worktreePath));
-    assert.ok(existsSync(join(worktreePath, '.git')));
+    expect(existsSync(worktreePath)).toBeTruthy();
+    expect(existsSync(join(worktreePath, '.git'))).toBeTruthy();
 
     // Verify expected path
     const expectedPath = join(projectsRoot, 'worktrees', 'test-project', 'pr', '1234');
-    assert.strictEqual(worktreePath, expectedPath);
+    expect(worktreePath).toBe(expectedPath);
   });
 
   it('path construction uses new hierarchy correctly', async () => {
@@ -148,15 +153,15 @@ describe('Integration: Create → List → Remove workflow', () => {
 
     // Test branch path
     const branchPath = getWorktreePath(projectsRoot, config, 'galaxy', 'branch', 'cool-feature');
-    assert.strictEqual(branchPath, join(projectsRoot, 'worktrees', 'galaxy', 'branch', 'cool-feature'));
+    expect(branchPath).toBe(join(projectsRoot, 'worktrees', 'galaxy', 'branch', 'cool-feature'));
 
     // Test PR path
     const prPath = getWorktreePath(projectsRoot, config, 'galaxy', 'pr', '1234');
-    assert.strictEqual(prPath, join(projectsRoot, 'worktrees', 'galaxy', 'pr', '1234'));
+    expect(prPath).toBe(join(projectsRoot, 'worktrees', 'galaxy', 'pr', '1234'));
 
     // Test note path
     const notePath = getNotePath(vaultRoot, 'galaxy', 'cool-feature');
-    assert.strictEqual(notePath, join(vaultRoot, 'projects', 'galaxy', 'worktrees', 'cool-feature.md'));
+    expect(notePath).toBe(join(vaultRoot, 'projects', 'galaxy', 'worktrees', 'cool-feature.md'));
   });
 
   it('multiple worktrees can coexist in hierarchy', async () => {
@@ -168,18 +173,18 @@ describe('Integration: Create → List → Remove workflow', () => {
     const pr1 = await setupWorktree('galaxy', 'pr', '1234');
 
     // Verify all exist
-    assert.ok(existsSync(branch1));
-    assert.ok(existsSync(branch2));
-    assert.ok(existsSync(pr1));
+    expect(existsSync(branch1)).toBeTruthy();
+    expect(existsSync(branch2)).toBeTruthy();
+    expect(existsSync(pr1)).toBeTruthy();
 
     // Verify they're in the right places
-    assert.ok(branch1.includes('branch/feature1'));
-    assert.ok(branch2.includes('branch/feature2'));
-    assert.ok(pr1.includes('pr/1234'));
+    expect(branch1.includes('branch/feature1')).toBeTruthy();
+    expect(branch2.includes('branch/feature2')).toBeTruthy();
+    expect(pr1.includes('pr/1234')).toBeTruthy();
 
     // Verify they don't interfere with each other
-    assert.notStrictEqual(branch1, branch2);
-    assert.notStrictEqual(branch1, pr1);
+    expect(branch1).not.toBe(branch2);
+    expect(branch1).not.toBe(pr1);
   });
 
   it('git worktree can be used from nested directory', async () => {
@@ -195,7 +200,7 @@ describe('Integration: Create → List → Remove workflow', () => {
     try {
       process.chdir(nestedDir);
       const result = await execa('git', ['rev-parse', '--show-toplevel']);
-      assert.ok(result.stdout.includes('cool-feature'));
+      expect(result.stdout.includes('cool-feature')).toBeTruthy();
     } finally {
       process.chdir(cwd);
     }
@@ -206,16 +211,16 @@ describe('Integration: Create → List → Remove workflow', () => {
     const worktreePath = await setupWorktree('galaxy', 'branch', 'cool-feature');
 
     // Verify worktree exists
-    assert.ok(existsSync(worktreePath));
+    expect(existsSync(worktreePath)).toBeTruthy();
 
     // Remove worktree
     rmSync(worktreePath, { recursive: true });
 
     // Verify worktree is gone
-    assert.ok(!existsSync(worktreePath));
+    expect(existsSync(worktreePath)).toBeFalsy();
 
     // Verify parent structure still exists
-    assert.ok(existsSync(join(projectsRoot, 'worktrees', 'galaxy', 'branch')));
+    expect(existsSync(join(projectsRoot, 'worktrees', 'galaxy', 'branch'))).toBeTruthy();
   });
 
   it('handles worktree names with slashes', async () => {
@@ -223,7 +228,7 @@ describe('Integration: Create → List → Remove workflow', () => {
     const worktreePath = await setupWorktree('galaxy', 'branch', 'feature/awesome');
 
     // Verify directory structure with nested names
-    assert.ok(existsSync(worktreePath));
-    assert.ok(worktreePath.includes('branch/feature/awesome'));
+    expect(existsSync(worktreePath)).toBeTruthy();
+    expect(worktreePath.includes('branch/feature/awesome')).toBeTruthy();
   });
 });

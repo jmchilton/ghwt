@@ -1,39 +1,38 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, expect } from 'vitest';
 import { parseBranchArg } from '../../lib/branch-parser.js';
 
 describe('parseBranchArg', () => {
   it('should detect PR from numeric string', () => {
     const result = parseBranchArg('1234');
-    assert.strictEqual(result.type, 'pr');
-    assert.strictEqual(result.name, '1234');
+    expect(result.type).toBe('pr');
+    expect(result.name).toBe('1234');
   });
 
   it('should detect branch from alphanumeric name', () => {
     const result = parseBranchArg('cool-feature');
-    assert.strictEqual(result.type, 'branch');
-    assert.strictEqual(result.name, 'cool-feature');
+    expect(result.type).toBe('branch');
+    expect(result.name).toBe('cool-feature');
   });
 
   it('should accept branch names with slashes', () => {
     const result = parseBranchArg('fix/bug-123');
-    assert.strictEqual(result.type, 'branch');
-    assert.strictEqual(result.name, 'fix/bug-123');
+    expect(result.type).toBe('branch');
+    expect(result.name).toBe('fix/bug-123');
   });
 
   it('should reject old feature/ prefix', () => {
-    assert.throws(() => parseBranchArg('feature/cool'));
+    expect(() => parseBranchArg('feature/cool')).toThrow();
   });
 
   it('should reject old bug/ prefix', () => {
-    assert.throws(() => parseBranchArg('bug/fix'));
+    expect(() => parseBranchArg('bug/fix')).toThrow();
   });
 
   it('should reject old pr/ prefix', () => {
-    assert.throws(() => parseBranchArg('pr/1234'));
+    expect(() => parseBranchArg('pr/1234')).toThrow();
   });
 
   it('should reject invalid characters', () => {
-    assert.throws(() => parseBranchArg('invalid branch!'));
+    expect(() => parseBranchArg('invalid branch!')).toThrow();
   });
 });
