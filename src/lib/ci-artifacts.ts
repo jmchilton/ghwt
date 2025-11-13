@@ -183,19 +183,23 @@ export async function getCIMetadata(
   const { readdirSync } = await import('fs');
   let actualSummaryPath = '';
 
-  // gh-ci-artifacts creates pr-XXX or branch-XXX subdirs
-  // artifactsPath = ~/ci-artifacts/galaxy/pr-21250
-  // actualSummaryPath = ~/ci-artifacts/galaxy/pr-21250/pr-21250/summary.json
-  try {
-    if (existsSync(artifactsPath)) {
-      const dirs = readdirSync(artifactsPath);
-      const resultDir = dirs.find((d) => d.startsWith('pr-') || d.startsWith('branch-'));
-      if (resultDir) {
-        actualSummaryPath = join(artifactsPath, resultDir, 'summary.json');
+  // Check for summary.json directly in artifactsPath first
+  const directSummaryPath = join(artifactsPath, 'summary.json');
+  if (existsSync(directSummaryPath)) {
+    actualSummaryPath = directSummaryPath;
+  } else {
+    // Fall back to checking for pr-XXX or branch-XXX subdirs
+    try {
+      if (existsSync(artifactsPath)) {
+        const dirs = readdirSync(artifactsPath);
+        const resultDir = dirs.find((d) => d.startsWith('pr-') || d.startsWith('branch-'));
+        if (resultDir) {
+          actualSummaryPath = join(artifactsPath, resultDir, 'summary.json');
+        }
       }
+    } catch {
+      // Continue with empty path
     }
-  } catch {
-    // Continue with empty path
   }
 
   if (!actualSummaryPath || !existsSync(actualSummaryPath)) {
