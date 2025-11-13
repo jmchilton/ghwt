@@ -226,8 +226,16 @@ export class ZellijSessionManager implements TerminalSessionManager {
       note_path: notePath,
     };
 
+    if (this.verbose) {
+      console.log(`[DEBUG] Zellij template vars:`, JSON.stringify(vars, null, 2));
+    }
+
     // Generate KDL layout
     const kdlLayout = this.generateKdlLayout(config, worktreePath, vars);
+
+    if (this.verbose) {
+      console.log(`[DEBUG] Generated KDL layout:\n${kdlLayout}`);
+    }
 
     // Write layout to persistent cache directory (not /tmp which gets cleaned)
     const layoutDir = join(worktreePath, '.zellij');

@@ -35,7 +35,6 @@ export class TmuxSessionManager implements TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     notePath?: string,
   ): Promise<void> {
     const sessionExists = await this.sessionExists(sessionName);
@@ -48,6 +47,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
       worktree_path: worktreePath,
       project: sessionName.split('-')[0],
       branch: sessionName.split('-').slice(1).join('-'),
+      note_path: notePath,
     };
 
     // Normalize config to tabs format (handles backward compatibility)

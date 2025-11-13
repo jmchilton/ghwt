@@ -230,7 +230,7 @@ export async function syncCommand(
       if (configPath) {
         try {
           const sessionConfig = loadSessionConfig(configPath);
-          await manager.createSession(sessionName, sessionConfig, wt.path);
+          await manager.createSession(sessionName, sessionConfig, wt.path, notePath);
 
           if (options?.verbose) {
             console.log(`🖥️  Recreated session: ${wt.project}/${wt.branch}`);
