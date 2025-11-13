@@ -117,6 +117,25 @@ export interface ProjectPaths {
 }
 
 /**
+ * Get the full path to CI artifacts for a worktree using new hierarchy:
+ * ci-artifacts/{project}/{branchType}/{name}
+ *
+ * @param projectsRoot The projects root directory
+ * @param project Project name
+ * @param branchType 'branch' or 'pr'
+ * @param name Branch name (without type prefix) or PR number
+ */
+export function getCIArtifactsPath(
+  projectsRoot: string,
+  project: string,
+  branchType: 'branch' | 'pr',
+  name: string,
+): string {
+  const ciArtifactsRoot = join(projectsRoot, 'ci-artifacts');
+  return join(ciArtifactsRoot, project, branchType, name);
+}
+
+/**
  * Load and expand all project paths from config
  */
 export function loadProjectPaths(): ProjectPaths {

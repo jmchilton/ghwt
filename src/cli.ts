@@ -18,6 +18,8 @@ import { lintCommand } from './commands/lint.js';
 import { cleanSessionsCommand } from './commands/clean-sessions.js';
 import { ciCleanCommand } from './commands/ci-artifacts-clean.js';
 import { ciDownloadCommand } from './commands/ci-artifacts-download.js';
+import { pathCiArtifactsCommand } from './commands/path-ci-artifacts.js';
+import { pathNoteCommand } from './commands/path-note.js';
 
 const program = new Command();
 
@@ -285,6 +287,38 @@ program
   .action(async (project, branch, options) => {
     try {
       await ciDownloadCommand(project, branch, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('path-ci-artifacts [project] [branch]')
+  .description(
+    'Output path to CI artifacts for a worktree\nRun without args to pick from list, or with project to filter',
+  )
+  .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
+  .action(async (project, branch, options) => {
+    try {
+      await pathCiArtifactsCommand(project, branch, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('path-note [project] [branch]')
+  .description(
+    'Output path to worktree note in Obsidian vault\nRun without args to pick from list, or with project to filter',
+  )
+  .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
+  .action(async (project, branch, options) => {
+    try {
+      await pathNoteCommand(project, branch, options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
