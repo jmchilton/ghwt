@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch } from '../lib/worktree-list.js';
-import { loadProjectPaths, getWorktreePath } from '../lib/paths.js';
+import { loadProjectPaths, getWorktreePath, parseBranchFromOldFormat } from '../lib/paths.js';
 import { assertWorktreeExists } from '../lib/errors.js';
 
 export async function codeCommand(
@@ -28,7 +28,8 @@ export async function codeCommand(
   }
 
   const { config, projectsRoot } = loadProjectPaths();
-  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, selectedBranch);
+  const { branchType, name } = parseBranchFromOldFormat(selectedBranch);
+  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, branchType, name);
 
   // Check if worktree exists
   assertWorktreeExists(worktreePath);

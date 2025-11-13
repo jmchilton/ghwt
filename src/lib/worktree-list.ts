@@ -1,12 +1,18 @@
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { loadConfig, expandPath } from './config.js';
+import { execa } from 'execa';
 
 export interface WorktreeInfo {
   project: string;
   branch: string;
   path: string;
   displayName: string; // "project: branch" for display
+}
+
+export interface WorktreeContext {
+  project: string;
+  branch: string;
 }
 
 /**
@@ -174,4 +180,72 @@ export function resolveBranch(project: string, branchInput: string): string {
   }
 
   return branchInput; // Fallback to input if no match found
+}
+
+/**
+ * Detect current worktree from directory hierarchy.
+ * Uses git rev-parse --show-toplevel to find worktree root, then walks up
+ * looking for: worktrees/{project}/(branch|pr)/{name}
+ *
+ * @returns WorktreeContext with project and branch
+ * @throws Error if not in a worktree directory
+ */
+export async function getCurrentWorktreeContext(): Promise<WorktreeContext> {
+  const config = loadConfig();
+  const projectsRoot = expandPath(config.projectsRoot);
+  const worktreesDir = config.worktreesDir || 'worktrees';
+  const worktreeRoot = resolve(join(projectsRoot, worktreesDir));
+
+  try {
+    // Get git worktree root and resolve it
+    const { stdout } = await execa('git', ['rev-parse', '--show-toplevel']);
+    let currentPath = resolve(stdout.trim());
+
+    // Walk up directory tree looking for worktrees/{project}/{type}/{name}
+    while (currentPath.startsWith(worktreeRoot)) {
+      const relativePath = currentPath.slice(worktreeRoot.length + 1); // Remove leading separator
+      const parts = relativePath.split('/').filter(Boolean);
+
+      // Need at least project, type, and name
+      if (parts.length >= 3) {
+        const project = parts[0];
+        const branchType = parts[1];
+
+        // Validate branch type
+        if (branchType === 'branch' || branchType === 'pr') {
+          const name = parts.slice(2).join('/');
+          const branch = `${branchType}/${name}`;
+
+          return { project, branch };
+        }
+      }
+
+      // Move up one directory
+      const parentPath = resolve(join(currentPath, '..'));
+      if (parentPath === currentPath) {
+        break; // Reached root
+      }
+      currentPath = parentPath;
+    }
+
+    // Not in worktree hierarchy
+    throw new Error(
+      'Not in a ghwt worktree directory. ' +
+        `Run from within ${worktreeRoot}/{project}/(branch|pr)/{name}/`,
+    );
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      throw new Error('git command not found');
+    }
+
+    // Re-throw our error message, or wrap other errors
+    if (error instanceof Error && error.message.includes('ghwt worktree')) {
+      throw error;
+    }
+
+    throw new Error(
+      'Not in a ghwt worktree directory. ' +
+        `Run from within ${worktreeRoot}/{project}/(branch|pr)/{name}/`,
+    );
+  }
 }

@@ -2,7 +2,12 @@ import { join } from 'path';
 import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch } from '../lib/worktree-list.js';
-import { loadProjectPaths, getWorktreePath, getNotePath } from '../lib/paths.js';
+import {
+  loadProjectPaths,
+  getWorktreePath,
+  getNotePath,
+  parseBranchFromOldFormat,
+} from '../lib/paths.js';
 import { assertWorktreeExists, assertNoteExists } from '../lib/errors.js';
 import { updateNoteMetadata } from '../lib/obsidian.js';
 
@@ -37,8 +42,9 @@ export async function attachPrCommand(
   const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
   const repoPath = join(reposRoot, selectedProject);
-  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, selectedBranch);
-  const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);
+  const { branchType, name } = parseBranchFromOldFormat(selectedBranch);
+  const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, branchType, name);
+  const notePath = getNotePath(vaultRoot, selectedProject, name);
 
   // Check if worktree exists
   assertWorktreeExists(worktreePath);

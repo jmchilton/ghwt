@@ -19,9 +19,31 @@ export function getWorktreeName(project: string, branch: string): string {
 }
 
 /**
- * Get the full path to a worktree directory
+ * Get the full path to a worktree directory using new hierarchy:
+ * worktrees/{project}/{branchType}/{name}
+ *
+ * @param projectsRoot The projects root directory
+ * @param config Configuration
+ * @param project Project name
+ * @param branchType 'branch' or 'pr'
+ * @param name Branch name (without type prefix) or PR number
  */
 export function getWorktreePath(
+  projectsRoot: string,
+  config: GhwtConfig,
+  project: string,
+  branchType: 'branch' | 'pr',
+  name: string,
+): string {
+  const worktreesRoot = join(projectsRoot, config.worktreesDir);
+  return join(worktreesRoot, project, branchType, name);
+}
+
+/**
+ * @deprecated Use getWorktreePath with branchType and name instead
+ * Get the full path to a worktree directory (old flat structure)
+ */
+export function getWorktreePathOld(
   projectsRoot: string,
   config: GhwtConfig,
   project: string,
@@ -29,6 +51,29 @@ export function getWorktreePath(
 ): string {
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
   return join(worktreesRoot, getWorktreeName(project, branch));
+}
+
+/**
+ * Parse branch string in old format (e.g., "feature/main", "bug/fix", "branch/name", "pr/1234")
+ * into branchType and name for the new hierarchy
+ *
+ * @param branch Branch string in old format with prefix
+ * @returns { branchType: 'branch' | 'pr', name: string }
+ */
+export function parseBranchFromOldFormat(branch: string): {
+  branchType: 'branch' | 'pr';
+  name: string;
+} {
+  if (branch.startsWith('feature/') || branch.startsWith('bug/') || branch.startsWith('branch/')) {
+    const name = branch.split('/').slice(1).join('/');
+    return { branchType: 'branch', name };
+  }
+  if (branch.startsWith('pr/')) {
+    const name = branch.slice(3);
+    return { branchType: 'pr', name };
+  }
+  // Default to branch type if no prefix
+  return { branchType: 'branch', name: branch };
 }
 
 /**

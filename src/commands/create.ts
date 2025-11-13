@@ -12,7 +12,8 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { launchSession } from '../lib/terminal-session.js';
-import { getWorktreePath, getNotePath, cleanBranchArg } from '../lib/paths.js';
+import { getWorktreePath, getNotePath } from '../lib/paths.js';
+import { parseBranchArg } from '../lib/branch-parser.js';
 import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
 
@@ -27,28 +28,38 @@ export async function createCommand(
   const vaultRoot = expandPath(config.vaultPath);
   const ciArtifactsDir = getCiArtifactsDir(config);
 
+  // Parse branch argument to determine type (PR vs branch)
+  let parsed;
+  try {
+    parsed = parseBranchArg(branchArg);
+  } catch (error) {
+    console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+
+  const { type: branchType, name: parsedName } = parsed;
   const repoPath = join(reposRoot, project);
-  const worktreePath = getWorktreePath(projectsRoot, config, project, branchArg);
+  const worktreePath = getWorktreePath(projectsRoot, config, project, branchType, parsedName);
   const noteDir = join(vaultRoot, 'projects', project, 'worktrees');
-  const notePath = getNotePath(vaultRoot, project, branchArg);
+  const notePath = getNotePath(vaultRoot, project, parsedName);
 
   // Check repo exists
   assertRepoExists(repoPath);
 
   console.log(`🔹 Repository: ${repoPath}`);
 
-  // Determine branch
+  // Determine actual git branch
   let branch = '';
   let prUrl = '';
   let prInfo: { headRefName: string; url: string; checks?: string } | null = null;
 
-  if (branchArg.startsWith('pr/')) {
-    const prNumber = branchArg.slice(3);
+  if (branchType === 'pr') {
+    // PR number is in parsedName
     try {
       // Get the appropriate repo URL for PR operations (upstream if available, else origin)
       const ghRepo = await getPRRepoUrl(repoPath);
 
-      prInfo = await getPRInfo(prNumber, ghRepo);
+      prInfo = await getPRInfo(parsedName, ghRepo);
       branch = prInfo.headRefName;
       prUrl = prInfo.url;
       console.log(`🔗 PR: ${prUrl}`);
@@ -56,16 +67,9 @@ export async function createCommand(
       console.error(`❌ Failed to fetch PR info: ${error}`);
       process.exit(1);
     }
-  } else if (
-    branchArg.startsWith('feature/') ||
-    branchArg.startsWith('bug/') ||
-    branchArg.startsWith('branch/')
-  ) {
-    // Use shared logic to clean branch argument
-    branch = cleanBranchArg(branchArg);
   } else {
-    console.error('❌ Unknown branch prefix. Use feature/, bug/, branch/, or pr/');
-    process.exit(1);
+    // branchType === 'branch'
+    branch = parsedName;
   }
 
   // Create worktree
@@ -166,7 +170,7 @@ export async function createCommand(
   }
 
   if (obsidianAvailable) {
-    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${project}/worktrees/${branchArg.replace(/\//g, '-')}.md`;
+    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${project}/worktrees/${parsedName.replace(/\//g, '-')}.md`;
     try {
       await execa('open', [obsidianUrl]);
       console.log('📖 Opened in Obsidian');

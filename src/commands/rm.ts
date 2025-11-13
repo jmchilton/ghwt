@@ -9,6 +9,7 @@ import {
   getNotePath,
   normalizeBundle,
   cleanBranchArg,
+  parseBranchFromOldFormat,
 } from '../lib/paths.js';
 
 export async function rmCommand(
@@ -30,8 +31,9 @@ export async function rmCommand(
   const cleanBranch = cleanBranchArg(branch);
 
   const repoPath = join(reposRoot, project);
-  const worktreePath = getWorktreePath(projectsRoot, config, project, branch);
-  const notePath = getNotePath(vaultRoot, project, branch);
+  const { branchType, name } = parseBranchFromOldFormat(branch);
+  const worktreePath = getWorktreePath(projectsRoot, config, project, branchType, name);
+  const notePath = getNotePath(vaultRoot, project, name);
   const archiveDir = join(projectsRoot, 'old');
 
   console.log(`🗑️  Removing worktree: ${branch}`);

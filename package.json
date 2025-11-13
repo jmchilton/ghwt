@@ -19,6 +19,7 @@
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "node --test dist/**/*.test.js",
+    "smoke-test": "bash scripts/smoke-test.sh",
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix && prettier --write .",
     "format": "prettier --write .",
