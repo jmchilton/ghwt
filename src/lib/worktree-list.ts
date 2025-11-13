@@ -1,5 +1,5 @@
 import { join, resolve } from 'path';
-import { readdirSync, existsSync } from 'fs';
+import { readdirSync, existsSync, realpathSync } from 'fs';
 import { loadConfig, expandPath } from './config.js';
 import { execa } from 'execa';
 
@@ -193,12 +193,12 @@ export async function getCurrentWorktreeContext(): Promise<WorktreeContext> {
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesDir = config.worktreesDir || 'worktrees';
-  const worktreeRoot = resolve(join(projectsRoot, worktreesDir));
+  const worktreeRoot = realpathSync(join(projectsRoot, worktreesDir));
 
   try {
-    // Get git worktree root and resolve it
+    // Get git worktree root and resolve it, following symlinks
     const { stdout } = await execa('git', ['rev-parse', '--show-toplevel']);
-    let currentPath = resolve(stdout.trim());
+    let currentPath = realpathSync(stdout.trim());
 
     // Walk up directory tree looking for worktrees/{project}/{type}/{name}
     while (currentPath.startsWith(worktreeRoot)) {
@@ -222,7 +222,7 @@ export async function getCurrentWorktreeContext(): Promise<WorktreeContext> {
       // Move up one directory
       const parentPath = resolve(join(currentPath, '..'));
       if (parentPath === currentPath) {
-        break; // Reached root
+        break; // Reached filesystem root
       }
       currentPath = parentPath;
     }
