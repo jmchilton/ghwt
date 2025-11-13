@@ -180,10 +180,14 @@ export function calculateDaysSinceActivity(notePath: string): number {
 
 /**
  * Get Obsidian URL to open a note
+ * @param project The project name
+ * @param branch The branch reference (with or without type prefix)
+ * @param vaultName The Obsidian vault name (defaults to 'projects' for backward compatibility)
  * @example getObsidianNoteUrl('galaxy', 'branch/main') => 'obsidian://open?vault=projects&file=projects/galaxy/worktrees/main.md'
- * @example getObsidianNoteUrl('galaxy', 'pr/1234') => 'obsidian://open?vault=projects&file=projects/galaxy/worktrees/1234.md'
+ * @example getObsidianNoteUrl('galaxy', 'pr/1234', 'ghwt') => 'obsidian://open?vault=ghwt&file=projects/galaxy/worktrees/1234.md'
  */
-export function getObsidianNoteUrl(project: string, branch: string): string {
+export function getObsidianNoteUrl(project: string, branch: string, vaultName?: string): string {
   const noteFileName = getNoteFileName(branch);
-  return `obsidian://open?vault=projects&file=projects/${project}/worktrees/${noteFileName}`;
+  const vault = vaultName || 'projects';
+  return `obsidian://open?vault=${vault}&file=projects/${project}/worktrees/${noteFileName}`;
 }

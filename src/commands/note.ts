@@ -34,7 +34,7 @@ export async function noteCommand(
     selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
-  const { vaultRoot } = loadProjectPaths();
+  const { vaultRoot, config } = loadProjectPaths();
 
   // getNotePath handles parsing the branch reference to extract the name
   const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);
@@ -43,7 +43,11 @@ export async function noteCommand(
   assertNoteExists(notePath);
 
   try {
-    const obsidianUrl = getObsidianNoteUrl(selectedProject, selectedBranch);
+    const obsidianUrl = getObsidianNoteUrl(
+      selectedProject,
+      selectedBranch,
+      config.obsidianVaultName,
+    );
     await execa('open', [obsidianUrl]);
     console.log(`📖 Opened in Obsidian: ${notePath}`);
   } catch (error) {

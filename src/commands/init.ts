@@ -92,6 +92,7 @@ export async function initCommand(options: {
     worktreesDir: 'worktrees',
     vaultPath,
     syncInterval: null,
+    obsidianVaultName: vaultName,
     ...(terminalMultiplexer && { terminalMultiplexer }),
     ...(terminalUI && { terminalUI }),
   };

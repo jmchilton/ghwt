@@ -4,7 +4,7 @@ import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { getGitInfo, branchExists } from '../lib/git.js';
 import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
-import { createWorktreeNote } from '../lib/obsidian.js';
+import { createWorktreeNote, getObsidianNoteUrl } from '../lib/obsidian.js';
 import {
   shouldFetchArtifacts,
   fetchCIArtifacts,
@@ -154,7 +154,7 @@ export async function createCommand(
   }
 
   if (obsidianAvailable) {
-    const obsidianUrl = `obsidian://open?vault=projects&file=projects/${project}/worktrees/${parsedName.replace(/\//g, '-')}.md`;
+    const obsidianUrl = getObsidianNoteUrl(project, parsedName, config.obsidianVaultName);
     try {
       await execa('open', [obsidianUrl]);
       console.log('📖 Opened in Obsidian');
