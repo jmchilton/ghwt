@@ -56,7 +56,7 @@ export async function initCommand(options: {
     join(projectsRoot, 'worktrees'),
     join(projectsRoot, 'ci-artifacts-config'),
     join(projectsRoot, 'terminal-session-config'),
-    join(vaultPath, 'templates'),
+    join(vaultPath, 'projects'),
   ];
 
   for (const dir of dirs) {
@@ -74,9 +74,7 @@ export async function initCommand(options: {
   if (terminalMultiplexer) {
     console.log(`✅ Found ${terminalMultiplexer}`);
   } else {
-    console.warn(
-      `⚠️  Neither tmux nor zellij found. Install one for full functionality.`,
-    );
+    console.warn(`⚠️  Neither tmux nor zellij found. Install one for full functionality.`);
   }
 
   const terminalUI = await detectTerminalUI();

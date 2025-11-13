@@ -59,7 +59,7 @@ describe('Init command: end-to-end workspace initialization', () => {
     expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
     expect(existsSync(join(projectsRoot, 'ci-artifacts-config'))).toBeTruthy();
     expect(existsSync(join(projectsRoot, 'terminal-session-config'))).toBeTruthy();
-    expect(existsSync(join(vaultPath, 'templates'))).toBeTruthy();
+    expect(existsSync(join(vaultPath, 'projects'))).toBeTruthy();
   });
 
   it('creates config file with correct structure', async () => {
@@ -183,7 +183,7 @@ describe('Init command: end-to-end workspace initialization', () => {
       vaultPath: customVault,
     });
 
-    expect(existsSync(join(customVault, 'templates'))).toBeTruthy();
+    expect(existsSync(join(customVault, 'projects'))).toBeTruthy();
     expect(existsSync(join(customVault, 'dashboard.md'))).toBeTruthy();
   });
 
@@ -198,7 +198,7 @@ describe('Init command: end-to-end workspace initialization', () => {
     });
 
     expect(existsSync(vaultPath)).toBeTruthy();
-    expect(existsSync(join(vaultPath, 'templates'))).toBeTruthy();
+    expect(existsSync(join(vaultPath, 'projects'))).toBeTruthy();
   });
 
   it('creates all ci-artifacts-config and terminal-session-config directories', async () => {
@@ -251,7 +251,7 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     const vaultContents = readdirSync(vaultPath).sort();
     expect(vaultContents.includes('dashboard.md')).toBeTruthy();
-    expect(vaultContents.includes('templates')).toBeTruthy();
+    expect(vaultContents.includes('projects')).toBeTruthy();
   });
 
   it('dashboard frontmatter has correct metadata', async () => {
