@@ -1,6 +1,6 @@
 import { execa } from 'execa';
 import { pickWorktree } from '../lib/worktree-picker.js';
-import { resolveBranch } from '../lib/worktree-list.js';
+import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
 import { loadProjectPaths, getNotePath } from '../lib/paths.js';
 import { assertNoteExists } from '../lib/errors.js';
 import { getObsidianNoteUrl } from '../lib/obsidian.js';
@@ -8,14 +8,24 @@ import { getObsidianNoteUrl } from '../lib/obsidian.js';
 export async function noteCommand(
   project?: string,
   branch?: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  options?: { verbose?: boolean },
+
+  options?: { verbose?: boolean; this?: boolean },
 ): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
 
-  // If either is missing, show picker
-  if (!selectedProject || !selectedBranch) {
+  // If --this flag is set, use current worktree context
+  if (options?.this) {
+    try {
+      const context = await getCurrentWorktreeContext();
+      selectedProject = context.project;
+      selectedBranch = context.branch;
+    } catch (error) {
+      console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  } else if (!selectedProject || !selectedBranch) {
+    // If either is missing, show picker
     const picked = await pickWorktree(project);
     selectedProject = picked.project;
     selectedBranch = picked.branch;

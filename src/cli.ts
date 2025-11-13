@@ -109,11 +109,13 @@ program
     'Reuse existing terminal window instead of launching new wezterm process',
   )
   .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, cmdOptions) => {
     try {
       await attachCmd(project, branch, {
         existingTerminal: cmdOptions.existingTerminal,
         verbose: cmdOptions.verbose,
+        this: cmdOptions.this,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -142,6 +144,7 @@ program
     'Open worktree in VS Code\nRun without args to pick from list, or with project to filter',
   )
   .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, options) => {
     try {
       await codeCommand(project, branch, options);
@@ -157,6 +160,7 @@ program
     'Open worktree note in Obsidian\nRun without args to pick from list, or with project to filter',
   )
   .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, options) => {
     try {
       await noteCommand(project, branch, options);
@@ -172,6 +176,7 @@ program
     'Open branch/PR on GitHub\nRun without args to pick from list, or with project to filter',
   )
   .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, options) => {
     try {
       await ghCommand(project, branch, options);
@@ -188,6 +193,7 @@ program
   )
   .option('-c, --continue', 'Continue the most recent conversation')
   .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, prompt, options) => {
     try {
       const promptStr = prompt && prompt.length > 0 ? prompt.join(' ') : undefined;
@@ -204,6 +210,7 @@ program
     'Open worktree in Cursor IDE\nRun without args to pick from list, or with project to filter',
   )
   .option('-v, --verbose', 'Verbose output')
+  .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, options) => {
     try {
       await cursorCommand(project, branch, options);
