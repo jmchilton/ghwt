@@ -8,8 +8,8 @@ import {
   getWorktreePath,
   getNotePath,
   normalizeBundle,
-  cleanBranchArg,
   parseBranchFromOldFormat,
+  getSessionName,
 } from '../lib/paths.js';
 
 export async function rmCommand(
@@ -27,9 +27,6 @@ export async function rmCommand(
 
   const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
-  // Clean branch name to match what create uses for session naming
-  const cleanBranch = cleanBranchArg(branch);
-
   const repoPath = join(reposRoot, project);
   const { branchType, name } = parseBranchFromOldFormat(branch);
   const worktreePath = getWorktreePath(projectsRoot, config, project, branchType, name);
@@ -38,8 +35,8 @@ export async function rmCommand(
 
   console.log(`🗑️  Removing worktree: ${branch}`);
 
-  // Kill session if it exists - use cleaned branch name to match session creation
-  const sessionName = `${project}-${cleanBranch.replace(/\//g, '-')}`;
+  // Kill session if it exists - use getSessionName for consistency
+  const sessionName = getSessionName(project, branch);
   try {
     await killSession(sessionName, config);
     console.log(`✅ Killed terminal session: ${sessionName}`);

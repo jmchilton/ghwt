@@ -11,7 +11,7 @@ import {
   isUIAvailable,
 } from './terminal-session-base.js';
 import { validateSessionConfig } from './schemas.js';
-import { cleanBranchArg } from './paths.js';
+import { getSessionName } from './paths.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';
 import { ZellijSessionManager } from './terminal-session-zellij.js';
 
@@ -158,9 +158,8 @@ export async function attachCommand(
   ghwtConfig?: GhwtConfig,
   attachOptions?: AttachCommandOptions,
 ): Promise<void> {
-  // Clean branch name to match what create uses for session naming
-  const cleanBranch = cleanBranchArg(branch);
-  const sessionName = `${project}-${cleanBranch.replace(/\//g, '-')}`;
+  // Get session name using consistent naming
+  const sessionName = getSessionName(project, branch);
   const config = ghwtConfig || ({ terminalMultiplexer: 'tmux' } as GhwtConfig);
   const verbose = attachOptions?.verbose || false;
   const manager = getSessionManager(config, verbose);
