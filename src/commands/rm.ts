@@ -10,12 +10,12 @@ import {
   normalizeBundle,
   parseBranchFromOldFormat,
   getSessionName,
+  getZellijSessionPath,
 } from '../lib/paths.js';
 
 export async function rmCommand(
   project?: string,
   branch?: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   options?: { verbose?: boolean },
 ): Promise<void> {
   // Show picker if project or branch not specified
@@ -84,6 +84,22 @@ export async function rmCommand(
       console.log(`✅ Archived note: ${archiveNotePath}`);
     } catch (error) {
       console.error(`❌ Failed to archive note: ${error}`);
+      throw error;
+    }
+  }
+
+  // Delete zellij session layout if it exists
+  const zellijLayoutPath = getZellijSessionPath(projectsRoot, config, project, branch);
+  if (!existsSync(zellijLayoutPath)) {
+    if (options?.verbose) {
+      console.log(`⚠️  Zellij layout not found: ${zellijLayoutPath}`);
+    }
+  } else {
+    try {
+      rmSync(zellijLayoutPath);
+      console.log(`✅ Deleted zellij layout: ${zellijLayoutPath}`);
+    } catch (error) {
+      console.error(`❌ Failed to delete zellij layout: ${error}`);
       throw error;
     }
   }
