@@ -4,7 +4,6 @@ export interface GhwtConfig {
   worktreesDir: string;
   vaultPath: string;
   syncInterval: number | null;
-  defaultBaseBranch: string;
   obsidianVaultName?: string;
   shellCommandExecuteId?: string;
   terminalMultiplexer?: 'tmux' | 'zellij';

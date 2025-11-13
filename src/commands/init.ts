@@ -41,7 +41,6 @@ export async function initCommand(options: {
     worktreesDir: 'worktrees',
     vaultPath,
     syncInterval: null,
-    defaultBaseBranch: 'dev',
   };
 
   // Check dependencies

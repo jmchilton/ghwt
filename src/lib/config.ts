@@ -12,7 +12,6 @@ const DEFAULT_CONFIG: GhwtConfig = {
   worktreesDir: 'worktrees',
   vaultPath: '~/Library/Mobile Documents/iCloud~md~obsidian/Documents/projects',
   syncInterval: null,
-  defaultBaseBranch: 'dev',
   terminalMultiplexer: 'tmux',
   terminalUI: 'wezterm',
 };

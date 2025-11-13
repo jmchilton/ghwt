@@ -22,7 +22,6 @@ export const GhwtConfigSchema = z
       .union([z.number().int().min(60), z.null()])
       .default(null)
       .describe('Sync interval in seconds (minimum 60, null for no auto-sync)'),
-    defaultBaseBranch: z.string().default('dev').describe('Default base branch for new worktrees'),
     terminalMultiplexer: z
       .enum(['tmux', 'zellij'])
       .default('tmux')
