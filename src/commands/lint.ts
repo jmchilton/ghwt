@@ -5,6 +5,8 @@ import { load as loadYaml } from 'js-yaml';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { validateGhwtConfig, validateSessionConfig } from '../lib/schemas.js';
 import { parseFrontmatter } from '../lib/obsidian.js';
+import { getNotePath } from '../lib/paths.js';
+import { listWorktrees } from '../lib/worktree-list.js';
 
 interface LintResult {
   errors: string[];
@@ -263,6 +265,264 @@ export async function lintCommand(options?: {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     result.errors.push(`Failed to validate CI configs: ${message}`);
+  }
+
+  // =========================================================================
+  // 6. Obsidian Vault Configuration Validation
+  // =========================================================================
+  try {
+    const config = loadConfig();
+    const vaultRoot = expandPath(config.vaultPath);
+
+    // Check vault root exists
+    if (!existsSync(vaultRoot)) {
+      result.errors.push(`Vault root not found: ${vaultRoot}`);
+    } else {
+      const projectsDir = join(vaultRoot, 'projects');
+      if (!existsSync(projectsDir)) {
+        result.errors.push(`Vault projects directory not found: ${projectsDir}`);
+      } else {
+        result.passedChecks.push(`✅ Obsidian Vault: Structure valid at ${vaultRoot}`);
+      }
+
+      // Check vault name is configured
+      if (!config.obsidianVaultName) {
+        result.warnings.push(`Obsidian vault name not configured (will default to 'projects')`);
+      } else {
+        result.passedChecks.push(`✅ Obsidian Vault: Configured as '${config.obsidianVaultName}'`);
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to validate Obsidian vault configuration: ${message}`);
+  }
+
+  // =========================================================================
+  // 7. Notes Without Worktrees Detection
+  // =========================================================================
+  try {
+    const config = loadConfig();
+    const vaultRoot = expandPath(config.vaultPath);
+    const projectsDir = join(vaultRoot, 'projects');
+
+    if (existsSync(projectsDir)) {
+      const projectDirs = readdirSync(projectsDir).filter((name) =>
+        statSync(join(projectsDir, name)).isDirectory(),
+      );
+
+      let orphanNotes = 0;
+
+      for (const projDir of projectDirs) {
+        const worktreesDir = join(projectsDir, projDir, 'worktrees');
+        if (!existsSync(worktreesDir)) continue;
+
+        const noteFiles = readdirSync(worktreesDir).filter((f) => f.endsWith('.md'));
+
+        for (const file of noteFiles) {
+          const notePath = join(worktreesDir, file);
+          try {
+            const content = readFileSync(notePath, 'utf-8');
+            const { frontmatter } = parseFrontmatter(content);
+
+            // Check if worktree still exists
+            const worktreePath = frontmatter.worktree_path as string;
+            if (worktreePath && !existsSync(worktreePath)) {
+              result.errors.push(
+                `Note without worktree: ${projDir}/${file} (worktree path: ${worktreePath})`,
+              );
+              orphanNotes++;
+            }
+          } catch {
+            // Skip notes that can't be read (already reported in section 4)
+          }
+        }
+      }
+
+      if (orphanNotes === 0 && projectDirs.length > 0) {
+        result.passedChecks.push(`✅ Worktree notes: All notes have corresponding worktrees`);
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to check for notes without worktrees: ${message}`);
+  }
+
+  // =========================================================================
+  // 8. Worktrees Without Notes Detection
+  // =========================================================================
+  try {
+    const config = loadConfig();
+    const vaultRoot = expandPath(config.vaultPath);
+
+    const worktrees = listWorktrees();
+    let orphanWorktrees = 0;
+
+    for (const wt of worktrees) {
+      const notePath = getNotePath(vaultRoot, wt.project, wt.branch);
+
+      if (!existsSync(notePath)) {
+        result.errors.push(
+          `Worktree without note: ${wt.project}/${wt.branch} (expected note: ${notePath})`,
+        );
+        orphanWorktrees++;
+      }
+    }
+
+    if (orphanWorktrees === 0 && worktrees.length > 0) {
+      result.passedChecks.push(`✅ Worktree structure: All worktrees have corresponding notes`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to check for worktrees without notes: ${message}`);
+  }
+
+  // =========================================================================
+  // 9. Extra Files Detection (Terminal Session Config, CI Config, CI Artifacts)
+  // =========================================================================
+  try {
+    const config = loadConfig();
+    const projectsRoot = expandPath(config.projectsRoot);
+    const vaultRoot = expandPath(config.vaultPath);
+
+    // Check terminal-session-config directory
+    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
+    if (existsSync(sessionConfigDir)) {
+      const files = readdirSync(sessionConfigDir);
+      const validPattern = /^([_\w-]+)\.ghwt-session\.(yaml|yml|json)$/;
+      const extraFiles = files.filter((f) => !validPattern.test(f));
+
+      if (extraFiles.length > 0) {
+        result.warnings.push(
+          `Unexpected files in terminal-session-config: ${extraFiles.join(', ')}`,
+        );
+      }
+    }
+
+    // Check ci-artifacts-config directory
+    const ciConfigDir = join(projectsRoot, 'ci-artifacts-config');
+    if (existsSync(ciConfigDir)) {
+      const projectDirs = readdirSync(ciConfigDir).filter((name) => {
+        const path = join(ciConfigDir, name);
+        return statSync(path).isDirectory();
+      });
+
+      for (const projDir of projectDirs) {
+        const projPath = join(ciConfigDir, projDir);
+        const files = readdirSync(projPath);
+        const validPattern = /^\.gh-ci-artifacts\.(yaml|yml|json)$/;
+        const extraFiles = files.filter((f) => !validPattern.test(f));
+
+        if (extraFiles.length > 0) {
+          result.warnings.push(
+            `Unexpected files in ci-artifacts-config/${projDir}: ${extraFiles.join(', ')}`,
+          );
+        }
+      }
+    }
+
+    // Check for extra files in ci-artifacts directory
+    const ciArtifactsDir = join(projectsRoot, 'ci-artifacts');
+    if (existsSync(ciArtifactsDir)) {
+      // Scan all ci-artifacts/{project}/{branchType}/{name}/* files
+      const projectDirs = readdirSync(ciArtifactsDir).filter((name) => {
+        const path = join(ciArtifactsDir, name);
+        return statSync(path).isDirectory();
+      });
+
+      for (const projDir of projectDirs) {
+        const projPath = join(ciArtifactsDir, projDir);
+        const branchTypes = readdirSync(projPath).filter((name) => {
+          const path = join(projPath, name);
+          return statSync(path).isDirectory();
+        });
+
+        for (const branchType of branchTypes) {
+          if (branchType !== 'branch' && branchType !== 'pr') {
+            result.warnings.push(
+              `Unexpected directory in ci-artifacts/${projDir}: ${branchType} (expected 'branch' or 'pr')`,
+            );
+            continue;
+          }
+
+          const branchPath = join(projPath, branchType);
+          const names = readdirSync(branchPath).filter((name) => {
+            const path = join(branchPath, name);
+            return statSync(path).isDirectory();
+          });
+
+          // Names should match corresponding worktrees
+          for (const name of names) {
+            const fullBranch = `${branchType}/${name}`;
+            const notePath = getNotePath(vaultRoot, projDir, fullBranch);
+            if (!existsSync(notePath)) {
+              result.warnings.push(
+                `CI artifacts without note: ${projDir}/${fullBranch} (no corresponding note)`,
+              );
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to validate file structure: ${message}`);
+  }
+
+  // =========================================================================
+  // 10. Zellij Sessions Without Worktrees Detection
+  // =========================================================================
+  try {
+    const config = loadConfig();
+    const projectsRoot = expandPath(config.projectsRoot);
+    const vaultRoot = expandPath(config.vaultPath);
+    const sessionDir = config.zellijSessionsDir || '.zellij-sessions';
+    const sessionsRoot = join(projectsRoot, sessionDir);
+
+    if (existsSync(sessionsRoot)) {
+      let orphanSessions = 0;
+
+      const projectDirs = readdirSync(sessionsRoot).filter((name) => {
+        const path = join(sessionsRoot, name);
+        return statSync(path).isDirectory();
+      });
+
+      for (const projDir of projectDirs) {
+        const projPath = join(sessionsRoot, projDir);
+        const branchTypes = readdirSync(projPath).filter((name) => {
+          const path = join(projPath, name);
+          return statSync(path).isDirectory();
+        });
+
+        for (const branchType of branchTypes) {
+          if (branchType !== 'branch' && branchType !== 'pr') {
+            continue;
+          }
+
+          const branchPath = join(projPath, branchType);
+          const kdlFiles = readdirSync(branchPath).filter((f) => f.endsWith('.kdl'));
+
+          for (const file of kdlFiles) {
+            const name = file.slice(0, -4); // Remove .kdl extension
+            const fullBranch = `${branchType}/${name.replace(/-/g, '/')}`;
+            const notePath = getNotePath(vaultRoot, projDir, fullBranch);
+
+            if (!existsSync(notePath)) {
+              result.errors.push(
+                `Zellij session without note: ${projDir}/${branchType}/${name} (no corresponding note)`,
+              );
+              orphanSessions++;
+            }
+          }
+        }
+      }
+
+      if (orphanSessions === 0 && projectDirs.length > 0) {
+        result.passedChecks.push(`✅ Zellij sessions: All sessions have corresponding notes`);
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to validate zellij sessions: ${message}`);
   }
 
   // =========================================================================

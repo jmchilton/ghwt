@@ -228,10 +228,11 @@ name: test-session
   it('validates valid worktree notes', async () => {
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
+    const worktreePath = join(projectsRoot, 'worktrees', 'test-project', 'branch', 'cool-feature');
 
     // Create full structure
     mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
+    mkdirSync(worktreePath, { recursive: true });
 
     // Create worktree note with valid frontmatter
     const projectNotesDir = join(vaultPath, 'projects', 'test-project', 'worktrees');
@@ -239,11 +240,11 @@ name: test-session
 
     const validNote = `---
 project: test-project
-branch: cool-feature
+branch: branch/cool-feature
 status: in-progress
 created: 2024-11-13
 repo_url: https://github.com/test/repo
-worktree_path: /path/to/worktree
+worktree_path: ${worktreePath}
 base_branch: main
 commits_ahead: 5
 commits_behind: 0
@@ -352,32 +353,42 @@ windows:
 
     // Create full structure
     mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
+
+    // Create multiple worktrees
+    mkdirSync(join(projectsRoot, 'worktrees', 'test-project', 'branch', 'feature1'), {
+      recursive: true,
+    });
+    mkdirSync(join(projectsRoot, 'worktrees', 'test-project', 'branch', 'feature2'), {
+      recursive: true,
+    });
 
     // Create multiple notes
     const projectNotesDir = join(vaultPath, 'projects', 'test-project', 'worktrees');
     mkdirSync(projectNotesDir, { recursive: true });
 
-    const baseNote = `---
+    const createNote = (branch: string, branchFull: string) => {
+      const worktreePath = join(projectsRoot, 'worktrees', 'test-project', 'branch', branch);
+      return `---
 project: test-project
-branch: BRANCH
+branch: branch/${branchFull}
 status: in-progress
 created: 2024-11-13
 repo_url: https://github.com/test/repo
-worktree_path: /path/to/worktree
+worktree_path: ${worktreePath}
 base_branch: main
 commits_ahead: 0
 commits_behind: 0
 has_uncommitted_changes: false
 last_commit_date: 2024-11-13
-tracking_branch: origin/BRANCH
+tracking_branch: origin/${branchFull}
 days_since_activity: 0
 last_synced: 2024-11-13T10:00:00Z
 ---
 # Worktree Note`;
+    };
 
-    writeFileSync(join(projectNotesDir, 'feature1.md'), baseNote.replace(/BRANCH/g, 'feature1'));
-    writeFileSync(join(projectNotesDir, 'feature2.md'), baseNote.replace(/BRANCH/g, 'feature2'));
+    writeFileSync(join(projectNotesDir, 'feature1.md'), createNote('feature1', 'feature1'));
+    writeFileSync(join(projectNotesDir, 'feature2.md'), createNote('feature2', 'feature2'));
 
     const config = createTestConfig(projectsRoot, vaultPath);
     saveTestConfig(config);
@@ -424,10 +435,11 @@ last_synced: 2024-11-13T10:00:00Z
   it('handles worktree notes with PR metadata', async () => {
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
+    const prWorktreePath = join(projectsRoot, 'worktrees', 'test-project', 'pr', '1234');
 
     // Create full structure
     mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
+    mkdirSync(prWorktreePath, { recursive: true });
 
     // Create note with PR metadata
     const projectNotesDir = join(vaultPath, 'projects', 'test-project', 'worktrees');
@@ -435,11 +447,11 @@ last_synced: 2024-11-13T10:00:00Z
 
     const prNote = `---
 project: test-project
-branch: "1234"
+branch: pr/1234
 status: review
 created: 2024-11-13
 repo_url: https://github.com/test/repo
-worktree_path: /path/to/worktree
+worktree_path: ${prWorktreePath}
 base_branch: main
 commits_ahead: 3
 commits_behind: 0
@@ -471,17 +483,24 @@ last_synced: 2024-11-13T10:00:00Z
 
     // Create full structure
     mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
 
     // Create notes for multiple projects
     const projects = ['galaxy', 'gxformat2'];
-    const baseNote = `---
-project: PROJECT
-branch: feature
+
+    for (const project of projects) {
+      const worktreePath = join(projectsRoot, 'worktrees', project, 'branch', 'feature');
+      mkdirSync(worktreePath, { recursive: true });
+
+      const projectNotesDir = join(vaultPath, 'projects', project, 'worktrees');
+      mkdirSync(projectNotesDir, { recursive: true });
+
+      const note = `---
+project: ${project}
+branch: branch/feature
 status: in-progress
 created: 2024-11-13
-repo_url: https://github.com/test/PROJECT
-worktree_path: /path/to/worktree
+repo_url: https://github.com/test/${project}
+worktree_path: ${worktreePath}
 base_branch: main
 commits_ahead: 0
 commits_behind: 0
@@ -493,11 +512,7 @@ last_synced: 2024-11-13T10:00:00Z
 ---
 # Feature
 `;
-
-    for (const project of projects) {
-      const projectNotesDir = join(vaultPath, 'projects', project, 'worktrees');
-      mkdirSync(projectNotesDir, { recursive: true });
-      writeFileSync(join(projectNotesDir, 'feature.md'), baseNote.replace(/PROJECT/g, project));
+      writeFileSync(join(projectNotesDir, 'feature.md'), note);
     }
 
     const config = createTestConfig(projectsRoot, vaultPath);

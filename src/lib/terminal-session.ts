@@ -224,7 +224,6 @@ export async function tmuxSessionExists(sessionName: string): Promise<boolean> {
   return manager.sessionExists(sessionName);
 }
 
-
 export async function attachToSession(sessionName: string, worktreePath: string): Promise<void> {
   const manager = new TmuxSessionManager();
   return manager.attachToSession(sessionName, worktreePath);
