@@ -45,7 +45,7 @@ program
 program
   .command('create <project> <branch>')
   .description(
-    'Create a new worktree and Obsidian note\nBranch format: feature/<name>, bug/<name>, branch/<name>, or pr/<number>',
+    'Create a new worktree and Obsidian note\nBranch format: branch name (e.g., cool-feature) or PR number (e.g., 1234)',
   )
   .option('-v, --verbose', 'Verbose output')
   .action(async (project, branch, options) => {
@@ -88,7 +88,7 @@ program
 program
   .command('clone <repo-url> [branch]')
   .description(
-    'Clone a repository and optionally create a worktree\nBranch format: feature/<name>, bug/<name>, branch/<name>, or pr/<number>',
+    'Clone a repository and optionally create a worktree\nBranch format: branch name (e.g., cool-feature) or PR number (e.g., 1234)',
   )
   .option('--upstream <url>', 'Upstream repository URL (e.g., for a fork)')
   .option('-v, --verbose', 'Verbose output')

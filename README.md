@@ -4,7 +4,7 @@ Worktree-centered development task dashboard with Obsidian integration.
 
 ## Features
 
-- **Worktree Management**: Create, track, and remove git worktrees for features, bugs, and PRs
+- **Worktree Management**: Create, track, and remove git worktrees for branches and PRs
 - **Worktree Picker**: Interactive CLI menu for quick selection with fuzzy search and smart filtering
 - **Convenience Commands**: Quick access to code editor, notes, GitHub, terminal sessions, and Claude
 - **Terminal Sessions**: WezTerm + tmux integration with per-repo session configs (dev server, testing, interactive shells)
@@ -49,23 +49,23 @@ ghwt clone git@github.com:jmchilton/galaxy.git \
   --upstream git@github.com:galaxyproject/galaxy.git
 
 # Clone and create worktree
-ghwt clone https://github.com/galaxyproject/gxformat2 feature/test
-ghwt clone https://github.com/galaxyproject/galaxy pr/1234
+ghwt clone https://github.com/galaxyproject/gxformat2 test
+ghwt clone https://github.com/galaxyproject/galaxy 1234
 ```
 
 Clones repository as bare repository in `~/projects/repositories/<name>/`
 
 **Options:**
 
-- `[branch]` - Optional: creates worktree immediately (format: feature/<name>, bug/<name>, or pr/<number>)
+- `[branch]` - Optional: creates worktree immediately (format: branch name or PR number)
 - `--upstream <url>` - Optional: adds upstream remote (useful for forks with origin as your fork)
 
 ### Create a worktree
 
 ```bash
-ghwt create galaxy feature/cool-feature
-ghwt create galaxy bug/fix-login
-ghwt create galaxy pr/1234
+ghwt create galaxy cool-feature
+ghwt create galaxy fix-login
+ghwt create galaxy 1234
 ```
 
 Automatically:
@@ -104,8 +104,8 @@ Example output:
 ### Remove a worktree
 
 ```bash
-ghwt rm galaxy feature/cool-feature
-ghwt rm galaxy pr/1234
+ghwt rm galaxy cool-feature
+ghwt rm galaxy 1234
 ```
 
 Automatically:
@@ -120,10 +120,10 @@ Automatically:
 Persistent, reconnectable development environments with tmux or zellij multiplexer:
 
 ```bash
-ghwt create galaxy feature/new-feature
+ghwt create galaxy new-feature
 # → Automatically launches session (if config exists)
 
-ghwt attach galaxy feature/new-feature
+ghwt attach galaxy new-feature
 # → Reconnect to existing session (survives terminal crashes)
 ```
 
@@ -142,13 +142,13 @@ ghwt attach galaxy feature/new-feature
 Per-worktree Claude Code sessions - automatically scoped to each worktree directory:
 
 ```bash
-ghwt claude galaxy feature/new-feature
+ghwt claude galaxy new-feature
 # → Opens Claude in the worktree directory
 
-ghwt claude galaxy feature/new-feature --continue
+ghwt claude galaxy new-feature --continue
 # → Resumes last conversation in that worktree
 
-ghwt claude galaxy feature/new-feature "help me fix this bug"
+ghwt claude galaxy new-feature "help me fix this bug"
 # → Opens Claude with a prompt in that worktree
 ```
 
@@ -168,29 +168,38 @@ Quick shortcuts to open worktree in different contexts, with interactive picker 
 # Open in VS Code
 ghwt code                          # → Pick from all worktrees
 ghwt code galaxy                   # → Pick from galaxy worktrees only
-ghwt code galaxy pr/21199          # → Open directly (no picker)
+ghwt code galaxy 21199             # → Open directly (no picker)
+ghwt code --this                   # → Open current worktree
 
 # Open Obsidian note
 ghwt note                          # → Pick from all worktrees
 ghwt note training-material        # → Pick from training-material only
-ghwt note gxformat2 feature/test   # → Open directly
+ghwt note gxformat2 test           # → Open directly
+ghwt note --this                   # → Open current worktree's note
 
 # Open on GitHub (branch or PR)
 ghwt gh                            # → Pick from all worktrees
 ghwt gh artifact-detective         # → Pick from artifact-detective only
-ghwt gh galaxy pr/21199            # → Open directly (reads PR URL from note or constructs branch URL)
+ghwt gh galaxy 21199               # → Open directly (reads PR URL from note or constructs branch URL)
+ghwt gh --this                     # → Open current worktree on GitHub
 
 # Attach to terminal session
 ghwt attach                        # → Pick from all worktrees
 ghwt attach galaxy                 # → Pick from galaxy sessions only
-ghwt attach galaxy pr/21199        # → Attach directly
+ghwt attach galaxy 21199           # → Attach directly
+ghwt attach --this                 # → Attach to current worktree's session
 
 # Open Claude in worktree
 ghwt claude                        # → Pick from all worktrees
 ghwt claude galaxy                 # → Pick from galaxy worktrees only
-ghwt claude galaxy pr/21199        # → Open directly
-ghwt claude galaxy feature/fix --continue  # → Resume last session
-ghwt claude galaxy feature/fix "help me understand this code"  # → Open with prompt
+ghwt claude galaxy 21199           # → Open directly
+ghwt claude galaxy fix --continue  # → Resume last session
+ghwt claude galaxy fix "help me understand this code"  # → Open with prompt
+ghwt claude --this                 # → Open Claude in current worktree
+
+# Get paths for scripting
+ghwt path-note --this              # → Output path to current worktree's note
+ghwt path-ci-artifacts --this      # → Output path to current worktree's CI artifacts
 
 # Open dashboard
 ghwt dashboard                     # → Opens Obsidian dashboard
@@ -423,6 +432,13 @@ src/
 │   ├── note.ts            # Open Obsidian note
 │   ├── gh.ts              # Open GitHub branch/PR
 │   ├── claude.ts          # Open Claude in worktree
+│   ├── cursor.ts          # Open worktree in Cursor IDE
+│   ├── ci-artifacts-download.ts  # Download CI artifacts
+│   ├── ci-artifacts-clean.ts     # Clean CI artifacts
+│   ├── path-ci-artifacts.ts      # Output CI artifacts path
+│   ├── path-note.ts              # Output note path
+│   ├── clean-sessions.ts         # Kill all sessions
+│   ├── lint.ts                   # Validate configs
 │   └── dashboard.ts       # Open Obsidian dashboard
 └── lib/
     ├── git.ts                      # Git operations
@@ -435,6 +451,7 @@ src/
     ├── worktree-picker.ts          # Interactive worktree selector
     ├── worktree-list.ts            # Worktree enumeration
     ├── obsidian.ts                 # Note management
+    ├── paths.ts                    # Path construction utilities
     └── config.ts                   # Configuration handling
 ```
 
@@ -442,9 +459,10 @@ src/
 
 - **Smart fetching**: Only downloads for failing PRs
 - **Incremental mode**: Uses `--resume` when no new commits detected
-- **Centralized storage**: All artifacts in `~/projects/ci-artifacts/<repo>/<pr>/`
+- **Hierarchical storage**: All artifacts in `~/projects/ci-artifacts/<project>/<branch|pr>/<name>/`
 - **Metadata extraction**: Parses summary.json for test/lint counts
 - **Partial success handling**: Accepts exit codes 1 & 2 (partial/incomplete downloads)
+- **Path helpers**: `ghwt path-ci-artifacts --this` outputs artifact path for scripting
 
 ### Terminal Session Integration
 
@@ -467,7 +485,8 @@ src/
 - **Smart filtering**: When project arg provided, picker shows only that project's worktrees
 - **Fast path**: Full args provided bypasses picker (direct execution)
 - **Auto-select**: Single option automatically selected
-- **Integrated**: Used by `code`, `note`, `gh`, `attach`, and `claude` commands
+- **`--this` flag**: Skip picker and use current worktree (requires running from within a worktree)
+- **Integrated**: Used by `code`, `note`, `gh`, `attach`, `claude`, `path-note`, and `path-ci-artifacts` commands
 - **Enumeration**: Scans worktrees directory and sorts by project then branch
 
 ### Claude Sessions Integration
