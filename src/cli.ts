@@ -91,6 +91,7 @@ program
     'Clone a repository and optionally create a worktree\nBranch format: branch name (e.g., cool-feature) or PR number (e.g., 1234)',
   )
   .option('--upstream <url>', 'Upstream repository URL (e.g., for a fork)')
+  .option('--no-push', 'Disable push to origin (useful for forked repos)')
   .option('-v, --verbose', 'Verbose output')
   .action(async (repoUrl, branch, options) => {
     try {

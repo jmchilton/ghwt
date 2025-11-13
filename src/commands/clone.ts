@@ -7,9 +7,10 @@ import { createCommand } from './create.js';
 export async function cloneCommand(
   repoUrl: string,
   branchArg?: string,
-  options?: { upstream?: string; verbose?: boolean },
+  options?: { upstream?: string; verbose?: boolean; noPush?: boolean },
 ): Promise<void> {
   const upstreamUrl = options?.upstream;
+  const noPush = options?.noPush;
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const reposRoot = join(projectsRoot, config.repositoriesDir);
@@ -59,6 +60,19 @@ export async function cloneCommand(
       console.log(`✅ Fetched from upstream`);
     } catch (error) {
       console.error(`❌ Failed to add upstream remote: ${error}`);
+      process.exit(1);
+    }
+  }
+
+  // Disable push to origin if requested (useful for forked repos)
+  if (noPush) {
+    try {
+      await execa('git', ['remote', 'set-url', '--push', 'origin', 'no-push'], {
+        cwd: targetPath,
+      });
+      console.log(`✅ Disabled push to origin (use upstream to push)`);
+    } catch (error) {
+      console.error(`❌ Failed to disable push to origin: ${error}`);
       process.exit(1);
     }
   }

@@ -22,10 +22,19 @@ ghwt clone https://github.com/owner/repo.git
 ghwt clone https://github.com/your-fork/repo.git \
   --upstream https://github.com/owner/repo.git
 
+# Clone with upstream and disable origin push (safer fork workflow)
+ghwt clone https://github.com/your-fork/repo.git \
+  --upstream https://github.com/owner/repo.git \
+  --no-push
+
 # Clone and create worktree immediately
 ghwt clone https://github.com/owner/repo.git cool-feature
 ghwt clone https://github.com/owner/repo.git 1234
 ```
+
+**Clone Options:**
+- `--upstream <url>` - Add upstream remote (for forks: clone your fork, upstream = original repo)
+- `--no-push` - Disable push to origin, force pushes to go to upstream instead
 
 ### 3. Create a worktree
 

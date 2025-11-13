@@ -48,6 +48,11 @@ ghwt clone git@github.com:galaxyproject/galaxy.git
 ghwt clone git@github.com:jmchilton/galaxy.git \
   --upstream git@github.com:galaxyproject/galaxy.git
 
+# Clone with upstream and disable origin push (for safe fork workflow)
+ghwt clone git@github.com:jmchilton/galaxy.git \
+  --upstream git@github.com:galaxyproject/galaxy.git \
+  --no-push
+
 # Clone and create worktree
 ghwt clone https://github.com/galaxyproject/gxformat2 test
 ghwt clone https://github.com/galaxyproject/galaxy 1234
@@ -59,6 +64,7 @@ Clones repository as bare repository in `~/projects/repositories/<name>/`
 
 - `[branch]` - Optional: creates worktree immediately (format: branch name or PR number)
 - `--upstream <url>` - Optional: adds upstream remote (useful for forks with origin as your fork)
+- `--no-push` - Optional: disables push to origin (git remote set-url --push origin no-push), forcing pushes to go to upstream instead
 
 ### Create a worktree
 
