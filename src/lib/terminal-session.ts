@@ -122,7 +122,7 @@ export async function launchSession(
     }
 
     // Create session with optional note path for template substitution
-    await manager.createSession(sessionName, config, worktreePath, notePath);
+    await manager.createSession(sessionName, config, worktreePath, project, branch, notePath);
     console.log(`⚙️  Terminal session created: ${sessionName}`);
 
     // Launch UI app - let manager handle it
@@ -224,19 +224,6 @@ export async function tmuxSessionExists(sessionName: string): Promise<boolean> {
   return manager.sessionExists(sessionName);
 }
 
-export async function createTmuxSession(
-  sessionName: string,
-  config: SessionConfig,
-  worktreePath: string,
-): Promise<void> {
-  const manager = new TmuxSessionManager();
-  return manager.createSession(sessionName, config, worktreePath);
-}
-
-export async function launchWezterm(sessionName: string, worktreePath: string): Promise<void> {
-  const manager = new TmuxSessionManager();
-  return manager.launchUI(sessionName, worktreePath);
-}
 
 export async function attachToSession(sessionName: string, worktreePath: string): Promise<void> {
   const manager = new TmuxSessionManager();

@@ -89,6 +89,24 @@ export function getSessionName(project: string, branch: string): string {
 }
 
 /**
+ * Get the zellij session layout file path
+ * Follows the same organizational structure as notes: {zellijSessionsDir}/{project}/{branch|pr}/{name}.kdl
+ * @example getZellijSessionPath(projectsRoot, config, 'galaxy', 'branch/main') -> '{projectsRoot}/.zellij-sessions/galaxy/branch/main.kdl'
+ * @example getZellijSessionPath(projectsRoot, config, 'galaxy', 'pr/1234') -> '{projectsRoot}/.zellij-sessions/galaxy/pr/1234.kdl'
+ */
+export function getZellijSessionPath(
+  projectsRoot: string,
+  config: GhwtConfig,
+  project: string,
+  branch: string,
+): string {
+  const sessionDir = config.zellijSessionsDir || '.zellij-sessions';
+  const sessionsRoot = join(projectsRoot, sessionDir);
+  const { branchType, name } = parseBranchFromOldFormat(branch);
+  return join(sessionsRoot, project, branchType, `${normalizeBundle(name)}.kdl`);
+}
+
+/**
  * Container for all resolved project paths
  */
 export interface ProjectPaths {

@@ -13,6 +13,7 @@ import {
   launchGhostty,
   shortenSessionName,
 } from './terminal-session-base.js';
+import { getZellijSessionPath } from './paths.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
   constructor(
@@ -209,6 +210,8 @@ export class ZellijSessionManager implements TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
+    project: string,
+    branch: string,
     notePath?: string,
   ): Promise<void> {
     const shortenedName = shortenSessionName(sessionName);
@@ -221,8 +224,8 @@ export class ZellijSessionManager implements TerminalSessionManager {
 
     const vars: TemplateVars = {
       worktree_path: worktreePath,
-      project: sessionName.split('-')[0],
-      branch: sessionName.split('-').slice(1).join('-'),
+      project,
+      branch,
       note_path: notePath,
     };
 
@@ -237,10 +240,14 @@ export class ZellijSessionManager implements TerminalSessionManager {
       console.log(`[DEBUG] Generated KDL layout:\n${kdlLayout}`);
     }
 
-    // Write layout to persistent cache directory (not /tmp which gets cleaned)
-    const layoutDir = join(worktreePath, '.zellij');
+    // Write layout to centralized sessions directory
+    if (!this.config?.projectsRoot) {
+      throw new Error('ZellijSessionManager requires config with projectsRoot');
+    }
+
+    const layoutPath = getZellijSessionPath(this.config.projectsRoot, this.config, project, branch);
+    const layoutDir = join(layoutPath, '..');
     mkdirSync(layoutDir, { recursive: true });
-    const layoutPath = join(layoutDir, 'layout.kdl');
     writeFileSync(layoutPath, kdlLayout);
 
     try {

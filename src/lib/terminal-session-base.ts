@@ -56,6 +56,8 @@ export interface TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
+    project: string,
+    branch: string,
     notePath?: string,
   ): Promise<void>;
 

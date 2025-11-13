@@ -35,6 +35,8 @@ export class TmuxSessionManager implements TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
+    project: string,
+    branch: string,
     notePath?: string,
   ): Promise<void> {
     const sessionExists = await this.sessionExists(sessionName);
@@ -45,8 +47,8 @@ export class TmuxSessionManager implements TerminalSessionManager {
 
     const vars: TemplateVars = {
       worktree_path: worktreePath,
-      project: sessionName.split('-')[0],
-      branch: sessionName.split('-').slice(1).join('-'),
+      project,
+      branch,
       note_path: notePath,
     };
 
