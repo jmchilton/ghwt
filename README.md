@@ -44,7 +44,11 @@ Creates:
 ghwt clone https://github.com/galaxyproject/galaxy.git
 ghwt clone git@github.com:galaxyproject/galaxy.git
 
-# Clone with upstream (for forks)
+# Clone - auto-detects your fork if it exists!
+ghwt clone https://github.com/galaxyproject/galaxy.git
+# → If you have a fork, automatically uses your fork as origin + original as upstream
+
+# Clone with explicit upstream (skips auto-detection)
 ghwt clone git@github.com:jmchilton/galaxy.git \
   --upstream git@github.com:galaxyproject/galaxy.git
 
@@ -56,6 +60,9 @@ ghwt clone git@github.com:jmchilton/galaxy.git \
 # Clone and create worktree
 ghwt clone https://github.com/galaxyproject/gxformat2 test
 ghwt clone https://github.com/galaxyproject/galaxy 1234
+
+# Skip fork detection (useful if gh auth is not configured)
+ghwt clone https://github.com/galaxyproject/galaxy.git --no-fork-check
 ```
 
 Clones repository as bare repository in `~/projects/repositories/<name>/`
@@ -63,8 +70,9 @@ Clones repository as bare repository in `~/projects/repositories/<name>/`
 **Options:**
 
 - `[branch]` - Optional: creates worktree immediately (format: branch name or PR number)
-- `--upstream <url>` - Optional: adds upstream remote (useful for forks with origin as your fork)
+- `--upstream <url>` - Optional: adds upstream remote (useful for forks); skips fork detection
 - `--no-push` - Optional: disables push to origin (git remote set-url --push origin no-push), forcing pushes to go to upstream instead
+- `--no-fork-check` - Optional: skips automatic fork detection (useful if gh CLI is not authenticated)
 
 ### Create a worktree
 

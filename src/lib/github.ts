@@ -125,3 +125,59 @@ export async function createPRFromBranch(
     throw new Error(`Failed to create PR: ${error}`);
   }
 }
+
+/**
+ * Get the current GitHub user's login
+ * @throws Error if not authenticated with gh CLI
+ */
+export async function getCurrentUser(): Promise<string> {
+  try {
+    const { stdout } = await execa('gh', ['api', 'user', '--jq', '.login']);
+    return stdout.trim();
+  } catch (error) {
+    throw new Error(
+      `Failed to get current GitHub user. Make sure you are authenticated with gh CLI. ${error}`,
+    );
+  }
+}
+
+/**
+ * Check if current user has a fork of a repository
+ * @param repoUrl The URL of the upstream repository
+ * @returns The fork URL if found, null if user doesn't have a fork
+ */
+export async function checkUserFork(repoUrl: string): Promise<string | null> {
+  try {
+    const parsed = parseGitRepoUrl(repoUrl);
+    if (!parsed) return null;
+
+    const { owner, repo } = parsed;
+    const user = await getCurrentUser();
+
+    // Check if user has a repo with the same name
+    const { stdout: repoJson } = await execa('gh', [
+      'repo',
+      'view',
+      `${user}/${repo}`,
+      '--json',
+      'nameWithOwner,isFork,parent',
+    ]);
+
+    const repoData = JSON.parse(repoJson);
+
+    // Verify it's actually a fork of the target repo
+    if (repoData.isFork && repoData.parent && repoData.parent.includes(owner)) {
+      return `${user}/${repo}`;
+    }
+
+    // Even if not a fork (maybe they own the original), return it
+    if (repoData.nameWithOwner === `${user}/${repo}`) {
+      return `${user}/${repo}`;
+    }
+
+    return null;
+  } catch {
+    // User doesn't have a repo with this name, or gh api failed
+    return null;
+  }
+}

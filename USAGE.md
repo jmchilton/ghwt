@@ -16,13 +16,18 @@ Creates:
 ### 2. Clone a repository
 
 ```bash
+# Simple clone
 ghwt clone https://github.com/owner/repo.git
 
-# Clone with upstream (for forks)
+# Auto-detects your fork (if you're authenticated with gh CLI)
+# Uses your fork as origin, original repo as upstream
+ghwt clone https://github.com/owner/repo.git
+
+# Explicit upstream (skips auto-detection)
 ghwt clone https://github.com/your-fork/repo.git \
   --upstream https://github.com/owner/repo.git
 
-# Clone with upstream and disable origin push (safer fork workflow)
+# Disable push to origin (extra safety for forks)
 ghwt clone https://github.com/your-fork/repo.git \
   --upstream https://github.com/owner/repo.git \
   --no-push
@@ -30,11 +35,15 @@ ghwt clone https://github.com/your-fork/repo.git \
 # Clone and create worktree immediately
 ghwt clone https://github.com/owner/repo.git cool-feature
 ghwt clone https://github.com/owner/repo.git 1234
+
+# Skip fork detection
+ghwt clone https://github.com/owner/repo.git --no-fork-check
 ```
 
 **Clone Options:**
-- `--upstream <url>` - Add upstream remote (for forks: clone your fork, upstream = original repo)
-- `--no-push` - Disable push to origin, force pushes to go to upstream instead
+- `--upstream <url>` - Add upstream remote (skips auto-fork detection)
+- `--no-push` - Disable push to origin (force pushes to upstream instead)
+- `--no-fork-check` - Skip automatic fork detection (if gh CLI is not authenticated)
 
 ### 3. Create a worktree
 

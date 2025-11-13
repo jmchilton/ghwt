@@ -92,6 +92,7 @@ program
   )
   .option('--upstream <url>', 'Upstream repository URL (e.g., for a fork)')
   .option('--no-push', 'Disable push to origin (useful for forked repos)')
+  .option('--no-fork-check', 'Skip automatic fork detection')
   .option('-v, --verbose', 'Verbose output')
   .action(async (repoUrl, branch, options) => {
     try {

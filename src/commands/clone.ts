@@ -2,18 +2,39 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
+import { checkUserFork } from '../lib/github.js';
 import { createCommand } from './create.js';
 
 export async function cloneCommand(
   repoUrl: string,
   branchArg?: string,
-  options?: { upstream?: string; verbose?: boolean; noPush?: boolean },
+  options?: { upstream?: string; verbose?: boolean; noPush?: boolean; noForkCheck?: boolean },
 ): Promise<void> {
-  const upstreamUrl = options?.upstream;
+  let upstreamUrl = options?.upstream;
+  let cloneUrl = repoUrl;
   const noPush = options?.noPush;
+  const noForkCheck = options?.noForkCheck;
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const reposRoot = join(projectsRoot, config.repositoriesDir);
+
+  // Check if user has a fork of this repository (unless disabled)
+  if (!noForkCheck && !upstreamUrl) {
+    try {
+      const userFork = await checkUserFork(repoUrl);
+      if (userFork) {
+        console.log(`✨ Found your fork: ${userFork}`);
+        cloneUrl = userFork;
+        upstreamUrl = repoUrl;
+        console.log(`📌 Using your fork as origin, original as upstream`);
+      }
+    } catch (error) {
+      if (options?.verbose) {
+        console.log(`ℹ️  Could not check for fork: ${error}`);
+      }
+      // Continue with original URL if fork check fails
+    }
+  }
 
   // Extract repo name from URL
   // Handles: git@github.com:owner/repo.git or https://github.com/owner/repo.git or https://github.com/owner/repo
@@ -36,8 +57,8 @@ export async function cloneCommand(
   console.log(`📍 Target: ${targetPath}`);
 
   try {
-    // Clone as bare repository
-    await execa('git', ['clone', '--bare', repoUrl, targetPath]);
+    // Clone as bare repository (using cloneUrl which may be user's fork)
+    await execa('git', ['clone', '--bare', cloneUrl, targetPath]);
     console.log(`✅ Repository cloned successfully`);
     console.log(`📂 Path: ${targetPath}`);
   } catch (error) {
