@@ -51,7 +51,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     // Verify all required directories exist
@@ -68,7 +69,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     // Verify config file exists
@@ -91,7 +93,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     const dashboardPath = join(vaultPath, 'dashboard.md');
@@ -114,7 +117,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     const dashboardPath = join(vaultPath, 'dashboard.md');
@@ -129,12 +133,12 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('rejects second init with same config path', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     // Run init once
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     expect(existsSync(configPath)).toBeTruthy();
@@ -148,7 +152,8 @@ describe('Init command: end-to-end workspace initialization', () => {
     try {
       await initCommand({
         projectsRoot,
-        vaultPath,
+        vaultsPath: testRoot,
+        vaultName: 'vault',
       });
     } catch (error) {
       if (error instanceof Error && error.message === 'process.exit(1)') {
@@ -163,11 +168,11 @@ describe('Init command: end-to-end workspace initialization', () => {
     // Note: We can't test ~ expansion easily in tests, but we can verify
     // that the expandPath function is called via the resulting config
     const customRoot = join(testRoot, 'my-custom-projects');
-    const vaultPath = join(testRoot, 'vault');
 
     await initCommand({
       projectsRoot: customRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     expect(existsSync(join(customRoot, 'repositories'))).toBeTruthy();
@@ -180,7 +185,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath: customVault,
+      vaultsPath: testRoot,
+      vaultName: 'my-obsidian-vault',
     });
 
     expect(existsSync(join(customVault, 'projects'))).toBeTruthy();
@@ -194,7 +200,8 @@ describe('Init command: end-to-end workspace initialization', () => {
     // Note: This should work even with deeply nested paths
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: join(testRoot, 'nested', 'path', 'to'),
+      vaultName: 'vault',
     });
 
     expect(existsSync(vaultPath)).toBeTruthy();
@@ -203,11 +210,11 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('creates all ci-artifacts-config and terminal-session-config directories', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     // These directories are needed for configuration files
@@ -221,7 +228,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
@@ -239,7 +247,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     // Verify complete directory structure
@@ -260,7 +269,8 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     const dashboardPath = join(vaultPath, 'dashboard.md');
@@ -274,10 +284,9 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('allows re-initialization with different GHWT_CONFIG paths', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     // First initialization
-    await initCommand({ projectsRoot, vaultPath });
+    await initCommand({ projectsRoot, vaultsPath: testRoot, vaultName: 'vault' });
     expect(existsSync(configPath)).toBeTruthy();
 
     // Change GHWT_CONFIG to a different path for second initialization
@@ -285,10 +294,9 @@ describe('Init command: end-to-end workspace initialization', () => {
     process.env.GHWT_CONFIG = configPath2;
 
     const projectsRoot2 = join(testRoot, 'projects2');
-    const vaultPath2 = join(testRoot, 'vault2');
 
     // Second initialization with different config path should succeed
-    await initCommand({ projectsRoot: projectsRoot2, vaultPath: vaultPath2 });
+    await initCommand({ projectsRoot: projectsRoot2, vaultsPath: testRoot, vaultName: 'vault2' });
     expect(existsSync(configPath2)).toBeTruthy();
 
     // Both configs should exist
@@ -298,7 +306,6 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('preserves existing directories without errors', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     // Create directories first
     const reposDir = join(projectsRoot, 'repositories');
@@ -313,7 +320,8 @@ describe('Init command: end-to-end workspace initialization', () => {
     // Run init - should not destroy existing files
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     // Verify file still exists
@@ -324,12 +332,12 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('bails out if config file already exists', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     // Run init first time
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     // Verify config was created
@@ -340,7 +348,8 @@ describe('Init command: end-to-end workspace initialization', () => {
     try {
       await initCommand({
         projectsRoot,
-        vaultPath,
+        vaultsPath: testRoot,
+        vaultName: 'vault',
       });
     } catch (error) {
       if (error instanceof Error && error.message === 'process.exit(1)') {
@@ -353,11 +362,11 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('includes terminal multiplexer in config if detected', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
@@ -371,11 +380,11 @@ describe('Init command: end-to-end workspace initialization', () => {
 
   it('includes terminal UI in config if detected', async () => {
     const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
 
     await initCommand({
       projectsRoot,
-      vaultPath,
+      vaultsPath: testRoot,
+      vaultName: 'vault',
     });
 
     const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;

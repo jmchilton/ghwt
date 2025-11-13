@@ -33,7 +33,8 @@ async function detectTerminalUI(): Promise<'ghostty' | 'wezterm' | null> {
 
 export async function initCommand(options: {
   projectsRoot?: string;
-  vaultPath?: string;
+  vaultsPath?: string;
+  vaultName?: string;
 }): Promise<void> {
   // Check if config already exists
   const configFile = getConfigFilePath();
@@ -46,9 +47,11 @@ export async function initCommand(options: {
   console.log('🚀 Initializing ghwt workspace...\n');
 
   const projectsRoot = expandPath(options.projectsRoot || '~/projects');
-  const vaultPath = expandPath(
-    options.vaultPath || '~/Library/Mobile Documents/iCloud~md~obsidian/Documents/projects',
+  const vaultName = options.vaultName || 'ghwt';
+  const vaultsPath = expandPath(
+    options.vaultsPath || '~/Library/Mobile Documents/iCloud~md~obsidian/Documents',
   );
+  const vaultPath = join(vaultsPath, vaultName);
 
   // Create directory structure
   const dirs = [
@@ -153,6 +156,10 @@ SORT pr_updated_at DESC
   console.log('\nNext steps:');
   console.log('  1. ghwt create <project> <branch-type>/<name>');
   console.log('  2. Open dashboard.md in Obsidian to see live updates');
+  console.log('\n📦 Required Obsidian plugins for dashboard:');
+  console.log('  - Dataview (powers dashboard queries)');
+  console.log('  - Templater (used for template processing)');
+  console.log('  Install from: Settings → Community plugins → Browse');
   console.log('\n📦 Optional: Install Obsidian plugins for quick action links:');
   console.log("  - Install 'Shell commands' plugin");
   console.log('  - See README for setup instructions');

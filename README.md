@@ -28,12 +28,17 @@ npm link
 ### Initialize workspace
 
 ```bash
-ghwt init --vault-path ~/my-obsidian-vault
+ghwt init --vaults-path ~/my-obsidian-vaults --vault-name ghwt
 ```
+
+**Options:**
+
+- `--vaults-path <path>` - Directory containing Obsidian vaults (default: `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`)
+- `--vault-name <name>` - Name of the Obsidian vault to create (default: `ghwt`)
 
 Creates:
 
-- `~/projects/repositories/` - Bare git repos
+- `~/projects/repositories/` - Base git repos
 - `~/projects/worktrees/` - Active development directories
 - Dashboard template in Obsidian vault
 
@@ -65,7 +70,7 @@ ghwt clone https://github.com/galaxyproject/galaxy 1234
 ghwt clone https://github.com/galaxyproject/galaxy.git --no-fork-check
 ```
 
-Clones repository as bare repository in `~/projects/repositories/<name>/`
+Clones repository in `~/projects/repositories/<name>/`
 
 **Options:**
 
@@ -248,7 +253,7 @@ Each worktree note includes clickable links for instant access to common actions
 
 ```json
 {
-  "obsidianVaultName": "projects",
+  "obsidianVaultName": "ghwt",
   "shellCommandExecuteId": "YOUR_COMMAND_ID_HERE"
 }
 ```
@@ -398,6 +403,13 @@ Each worktree note tracks:
 - `last_synced` - Last metadata sync timestamp
 
 ## Obsidian Dashboard
+
+**Required Plugins:** The interactive dashboard requires the following Obsidian community plugins to be installed:
+
+- **Dataview** - Powers the dashboard queries
+- **Templater** - Used for template processing
+
+Install these from Settings → Community plugins → Browse.
 
 The init command creates `dashboard.md` with Dataview queries:
 

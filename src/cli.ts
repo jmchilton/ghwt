@@ -32,7 +32,8 @@ program
   .command('init')
   .description('Initialize ghwt workspace structure')
   .option('--projects-root <path>', 'Root directory for projects')
-  .option('--vault-path <path>', 'Path to Obsidian vault')
+  .option('--vaults-path <path>', 'Directory containing Obsidian vaults')
+  .option('--vault-name <name>', 'Name of the Obsidian vault to create', 'ghwt')
   .action(async (options) => {
     try {
       await initCommand(options);
@@ -96,7 +97,11 @@ program
   .option('-v, --verbose', 'Verbose output')
   .action(async (repoUrl, branch, options) => {
     try {
-      await cloneCommand(repoUrl, branch, options);
+      await cloneCommand(repoUrl, branch, {
+        ...options,
+        noPush: options.push === false,
+        noForkCheck: options.forkCheck === false,
+      });
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

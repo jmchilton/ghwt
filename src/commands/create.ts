@@ -2,7 +2,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
-import { getGitInfo, isBareRepository, branchExists } from '../lib/git.js';
+import { getGitInfo, branchExists } from '../lib/git.js';
 import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { createWorktreeNote } from '../lib/obsidian.js';
 import {
@@ -77,29 +77,15 @@ export async function createCommand(
   } else {
     console.log(`🌱 Creating worktree for branch '${branch}'...`);
 
-    const isBare = await isBareRepository(repoPath);
-
-    if (isBare) {
-      await execa('git', ['clone', repoPath, worktreePath]);
-      const branchExists_ = await branchExists(repoPath, branch);
-      if (branchExists_) {
-        await execa('git', ['checkout', branch], { cwd: worktreePath });
-      } else {
-        await execa('git', ['checkout', '-b', branch], {
-          cwd: worktreePath,
-        });
-      }
+    const branchExists_ = await branchExists(repoPath, branch);
+    if (branchExists_) {
+      await execa('git', ['worktree', 'add', worktreePath, branch], {
+        cwd: repoPath,
+      });
     } else {
-      const branchExists_ = await branchExists(repoPath, branch);
-      if (branchExists_) {
-        await execa('git', ['worktree', 'add', worktreePath, branch], {
-          cwd: repoPath,
-        });
-      } else {
-        await execa('git', ['worktree', 'add', '-b', branch, worktreePath], {
-          cwd: repoPath,
-        });
-      }
+      await execa('git', ['worktree', 'add', '-b', branch, worktreePath], {
+        cwd: repoPath,
+      });
     }
   }
 

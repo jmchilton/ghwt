@@ -36,13 +36,6 @@ export async function getUpstreamUrl(repoPath: string): Promise<string | null> {
   }
 }
 
-export async function isBareRepository(repoPath: string): Promise<boolean> {
-  const { stdout } = await execa('git', ['rev-parse', '--is-bare-repository'], {
-    cwd: repoPath,
-  });
-  return stdout.trim() === 'true';
-}
-
 export async function getCurrentBranch(repoPath: string): Promise<string> {
   const { stdout } = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
     cwd: repoPath,

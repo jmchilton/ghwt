@@ -144,40 +144,85 @@ export async function getCurrentUser(): Promise<string> {
 /**
  * Check if current user has a fork of a repository
  * @param repoUrl The URL of the upstream repository
- * @returns The fork URL if found, null if user doesn't have a fork
+ * @param verbose Whether to output debug logging
+ * @returns Object with user and repo if found, null if user doesn't have a fork
  */
-export async function checkUserFork(repoUrl: string): Promise<string | null> {
+export async function checkUserFork(
+  repoUrl: string,
+  verbose?: boolean,
+): Promise<{ user: string; repo: string } | null> {
   try {
+    if (verbose) {
+      console.log(`🔍 Checking for user fork of: ${repoUrl}`);
+    }
+
     const parsed = parseGitRepoUrl(repoUrl);
-    if (!parsed) return null;
+    if (!parsed) {
+      if (verbose) {
+        console.log(`⚠️  Could not parse repository URL: ${repoUrl}`);
+      }
+      return null;
+    }
 
     const { owner, repo } = parsed;
+    if (verbose) {
+      console.log(`📋 Parsed repository: owner=${owner}, repo=${repo}`);
+    }
+
     const user = await getCurrentUser();
+    if (verbose) {
+      console.log(`👤 Current GitHub user: ${user}`);
+    }
 
     // Check if user has a repo with the same name
+    const potentialFork = `${user}/${repo}`;
+    if (verbose) {
+      console.log(`🔎 Checking for repository: ${potentialFork}`);
+    }
+
     const { stdout: repoJson } = await execa('gh', [
       'repo',
       'view',
-      `${user}/${repo}`,
+      potentialFork,
       '--json',
       'nameWithOwner,isFork,parent',
     ]);
 
     const repoData = JSON.parse(repoJson);
+    if (verbose) {
+      console.log(`📊 Repository data:`, JSON.stringify(repoData, null, 2));
+    }
 
     // Verify it's actually a fork of the target repo
-    if (repoData.isFork && repoData.parent && repoData.parent.includes(owner)) {
-      return `${user}/${repo}`;
+    if (
+      repoData.isFork &&
+      repoData.parent &&
+      repoData.parent.owner &&
+      repoData.parent.owner.login === owner
+    ) {
+      if (verbose) {
+        console.log(`✅ Found fork: ${potentialFork} (fork of ${owner}/${repo})`);
+      }
+      return { user, repo };
     }
 
     // Even if not a fork (maybe they own the original), return it
-    if (repoData.nameWithOwner === `${user}/${repo}`) {
-      return `${user}/${repo}`;
+    if (repoData.nameWithOwner === potentialFork) {
+      if (verbose) {
+        console.log(`✅ Found repository: ${potentialFork} (user owns this repo)`);
+      }
+      return { user, repo };
     }
 
+    if (verbose) {
+      console.log(`❌ Repository ${potentialFork} is not a fork of ${owner}/${repo}`);
+    }
     return null;
-  } catch {
+  } catch (error) {
     // User doesn't have a repo with this name, or gh api failed
+    if (verbose) {
+      console.log(`⚠️  Fork check failed: ${error}`);
+    }
     return null;
   }
 }
