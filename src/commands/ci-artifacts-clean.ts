@@ -1,8 +1,8 @@
-import { join } from 'path';
 import { existsSync, rmSync } from 'fs';
 import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
 import { listWorktrees, resolveBranch } from '../lib/worktree-list.js';
 import { readNote, writeNote } from '../lib/obsidian.js';
+import { getNotePath } from '../lib/paths.js';
 
 export async function ciCleanCommand(
   project?: string,
@@ -44,13 +44,7 @@ export async function ciCleanCommand(
 
   for (const wt of targetWorktrees) {
     // Get note to check for PR/CI data
-    const notePath = join(
-      vaultRoot,
-      'projects',
-      wt.project,
-      'worktrees',
-      wt.branch.replace(/\//g, '-') + '.md',
-    );
+    const notePath = getNotePath(vaultRoot, wt.project, wt.branch);
 
     if (!existsSync(notePath)) {
       if (options?.verbose) {

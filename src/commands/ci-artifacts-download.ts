@@ -1,11 +1,10 @@
-import { join } from 'path';
 import { existsSync } from 'fs';
 import { loadConfig, expandPath } from '../lib/config.js';
 import { listWorktrees, resolveBranch } from '../lib/worktree-list.js';
 import { readNote, updateNoteMetadata } from '../lib/obsidian.js';
 import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
 import { getCIArtifactsPath, fetchAndUpdateCIMetadata } from '../lib/ci-artifacts.js';
-import { parseBranchFromOldFormat } from '../lib/paths.js';
+import { parseBranchFromOldFormat, getNotePath } from '../lib/paths.js';
 
 export async function ciDownloadCommand(
   project?: string,
@@ -43,13 +42,7 @@ export async function ciDownloadCommand(
 
   for (const wt of targetWorktrees) {
     // Get note to check for PR/CI data
-    const notePath = join(
-      vaultRoot,
-      'projects',
-      wt.project,
-      'worktrees',
-      wt.branch.replace(/\//g, '-') + '.md',
-    );
+    const notePath = getNotePath(vaultRoot, wt.project, wt.branch);
 
     if (!existsSync(notePath)) {
       if (options?.verbose) {
