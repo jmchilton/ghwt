@@ -12,7 +12,10 @@ import {
 } from './terminal-session-base.js';
 
 export class TmuxSessionManager implements TerminalSessionManager {
-  constructor(private config?: GhwtConfig, private verbose = false) {}
+  constructor(
+    private config?: GhwtConfig,
+    private verbose = false,
+  ) {}
   /**
    * Check if tmux session exists
    */

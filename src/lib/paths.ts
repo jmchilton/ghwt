@@ -35,13 +35,7 @@ export function getWorktreePath(
  * Get the full path to a worktree note file
  */
 export function getNotePath(vaultRoot: string, project: string, branch: string): string {
-  return join(
-    vaultRoot,
-    'projects',
-    project,
-    'worktrees',
-    `${normalizeBundle(branch)}.md`,
-  );
+  return join(vaultRoot, 'projects', project, 'worktrees', `${normalizeBundle(branch)}.md`);
 }
 
 /**

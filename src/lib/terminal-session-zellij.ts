@@ -15,7 +15,10 @@ import {
 } from './terminal-session-base.js';
 
 export class ZellijSessionManager implements TerminalSessionManager {
-  constructor(private config?: GhwtConfig, private verbose = false) {}
+  constructor(
+    private config?: GhwtConfig,
+    private verbose = false,
+  ) {}
 
   /**
    * Check if zellij session exists
@@ -173,14 +176,18 @@ export class ZellijSessionManager implements TerminalSessionManager {
           if (splitCommands.length > 0) {
             const combinedCmd = splitCommands.join(' && ') + ' && exec $SHELL';
             const startSuspended = window.start_suspended ? ' start_suspended=true' : '';
-            layout.push(`    pane split direction="vertical" command="${shell}"${startSuspended} {`);
+            layout.push(
+              `    pane split direction="vertical" command="${shell}"${startSuspended} {`,
+            );
             layout.push(`      cwd "${substitutedRoot}"`);
             layout.push(`      args "-c" "${escapeQuotes(combinedCmd)}"`);
             layout.push(`    }`);
           } else {
             // No commands, just set up split pane with cwd
             const startSuspended = window.start_suspended ? ' start_suspended=true' : '';
-            layout.push(`    pane split direction="vertical" command="${shell}"${startSuspended} {`);
+            layout.push(
+              `    pane split direction="vertical" command="${shell}"${startSuspended} {`,
+            );
             layout.push(`      cwd "${substitutedRoot}"`);
             layout.push(`    }`);
           }
@@ -284,7 +291,9 @@ export class ZellijSessionManager implements TerminalSessionManager {
     // Launch UI app with zellij attached
     if (ui === 'wezterm') {
       if (this.verbose) {
-        console.log(`  $ wezterm start --workspace ${shortenedName} --cwd ${worktreePath} -- zellij attach ${shortenedName}`);
+        console.log(
+          `  $ wezterm start --workspace ${shortenedName} --cwd ${worktreePath} -- zellij attach ${shortenedName}`,
+        );
       }
       await execa('wezterm', [
         'start',

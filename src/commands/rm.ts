@@ -3,7 +3,13 @@ import { existsSync, rmSync, mkdirSync, cpSync } from 'fs';
 import { execa } from 'execa';
 import { killSession } from '../lib/terminal-session.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
-import { loadProjectPaths, getWorktreePath, getNotePath, normalizeBundle, cleanBranchArg } from '../lib/paths.js';
+import {
+  loadProjectPaths,
+  getWorktreePath,
+  getNotePath,
+  normalizeBundle,
+  cleanBranchArg,
+} from '../lib/paths.js';
 
 export async function rmCommand(
   project?: string,

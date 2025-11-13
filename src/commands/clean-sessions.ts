@@ -38,7 +38,11 @@ export async function cleanSessionsCommand(options?: CleanSessionsOptions): Prom
 
   // Check tmux sessions
   try {
-    const { stdout: tmuxSessions } = await execa('tmux', ['list-sessions', '-F', '#{session_name}']);
+    const { stdout: tmuxSessions } = await execa('tmux', [
+      'list-sessions',
+      '-F',
+      '#{session_name}',
+    ]);
     const tmuxList = tmuxSessions.split('\n').filter((s) => s.trim());
 
     for (const worktree of worktrees) {

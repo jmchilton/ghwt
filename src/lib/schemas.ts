@@ -15,7 +15,10 @@ import { WindowConfig, TabConfig, SessionConfig } from './terminal-session-base.
 export const GhwtConfigSchema = z
   .object({
     projectsRoot: z.string().describe('Root directory for all projects (supports ~ expansion)'),
-    repositoriesDir: z.string().default('repositories').describe('Directory name for bare repositories'),
+    repositoriesDir: z
+      .string()
+      .default('repositories')
+      .describe('Directory name for bare repositories'),
     worktreesDir: z.string().default('worktrees').describe('Directory name for worktrees'),
     vaultPath: z.string().describe('Path to Obsidian vault (supports ~ expansion)'),
     syncInterval: z
@@ -30,8 +33,14 @@ export const GhwtConfigSchema = z
       .enum(['wezterm', 'ghostty', 'none'])
       .default('wezterm')
       .describe('Terminal UI application'),
-    obsidianVaultName: z.string().optional().describe('Name of Obsidian vault for shell command URIs'),
-    shellCommandExecuteId: z.string().optional().describe('Shell command executor ID for Obsidian integration'),
+    obsidianVaultName: z
+      .string()
+      .optional()
+      .describe('Name of Obsidian vault for shell command URIs'),
+    shellCommandExecuteId: z
+      .string()
+      .optional()
+      .describe('Shell command executor ID for Obsidian integration'),
   })
   .strict() // Reject unknown properties
   .describe('GHWT global configuration');
@@ -48,7 +57,10 @@ export const WindowConfigSchema: z.ZodType<WindowConfig> = z
     root: z.string().optional().describe('Working directory relative to worktree root'),
     pre: z.array(z.string()).optional().describe('Commands to run before main command'),
     panes: z.array(z.string()).optional().describe('Commands to execute in this window'),
-    start_suspended: z.boolean().optional().describe('Zellij-specific: show prompt before running commands (ignored by tmux)'),
+    start_suspended: z
+      .boolean()
+      .optional()
+      .describe('Zellij-specific: show prompt before running commands (ignored by tmux)'),
   })
   .strict()
   .describe('Terminal window configuration');
@@ -71,10 +83,20 @@ export const SessionConfigSchema: z.ZodType<SessionConfig> = z
     root: z.string().optional().describe('Root directory (unused - always set to worktree path)'),
     pre: z.array(z.string()).optional().describe('Session-level setup commands'),
     tabs: z.array(TabConfigSchema).optional().describe('New format: tabs with windows'),
-    windows: z.array(WindowConfigSchema).optional().describe('Legacy format: windows only (wrapped in default tab)'),
-    zellij_ui: z.object({
-      mode: z.enum(['full', 'compact', 'none']).optional().default('full').describe('UI mode: full (tab-bar + status-bar), compact (minimal), none (no bars)'),
-    }).optional().describe('Zellij-specific UI configuration (ignored by tmux)'),
+    windows: z
+      .array(WindowConfigSchema)
+      .optional()
+      .describe('Legacy format: windows only (wrapped in default tab)'),
+    zellij_ui: z
+      .object({
+        mode: z
+          .enum(['full', 'compact', 'none'])
+          .optional()
+          .default('full')
+          .describe('UI mode: full (tab-bar + status-bar), compact (minimal), none (no bars)'),
+      })
+      .optional()
+      .describe('Zellij-specific UI configuration (ignored by tmux)'),
   })
   .strict()
   .refine(
@@ -99,7 +121,10 @@ export const NoteFrontmatterSchema = z
     status: z
       .enum(['draft', 'in-progress', 'testing', 'review', 'blocked', 'merged'])
       .describe('Worktree status'),
-    created: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('Creation date (YYYY-MM-DD)'),
+    created: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .describe('Creation date (YYYY-MM-DD)'),
     repo_url: z.string().describe('Repository URL'),
     worktree_path: z.string().describe('Absolute path to worktree'),
     base_branch: z.string().describe('Base branch name'),
@@ -114,7 +139,10 @@ export const NoteFrontmatterSchema = z
     pr_reviews: z.number().int().optional().describe('Number of PR reviews'),
     pr_labels: z.array(z.string()).optional().describe('PR labels'),
     pr_updated_at: z.string().optional().describe('PR last updated timestamp'),
-    ci_status: z.enum(['complete', 'partial', 'incomplete']).optional().describe('CI artifact status'),
+    ci_status: z
+      .enum(['complete', 'partial', 'incomplete'])
+      .optional()
+      .describe('CI artifact status'),
     ci_failed_tests: z.number().int().optional().describe('Number of failed CI tests'),
     ci_linter_errors: z.number().int().optional().describe('Number of CI linter errors'),
     ci_artifacts_path: z.string().optional().describe('Path to CI artifacts'),
@@ -135,9 +163,7 @@ export type NoteFrontmatterType = z.infer<typeof NoteFrontmatterSchema>;
 
 function formatZodError(error: unknown): string {
   if (error instanceof z.ZodError) {
-    return error.issues
-      .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
-      .join('\n');
+    return error.issues.map((issue) => `  ${issue.path.join('.')}: ${issue.message}`).join('\n');
   }
   return String(error);
 }

@@ -46,8 +46,7 @@ export function shouldFetchArtifacts(
   const isFailing = prChecks === 'failing';
   const noCIData = !worktree.ci_last_synced;
   const artifactsMissing =
-    worktree.ci_artifacts_path &&
-    !existsSync(worktree.ci_artifacts_path as string);
+    worktree.ci_artifacts_path && !existsSync(worktree.ci_artifacts_path as string);
   return isFailing || noCIData || !!artifactsMissing;
 }
 

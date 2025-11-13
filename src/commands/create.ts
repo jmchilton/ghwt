@@ -56,7 +56,11 @@ export async function createCommand(
       console.error(`❌ Failed to fetch PR info: ${error}`);
       process.exit(1);
     }
-  } else if (branchArg.startsWith('feature/') || branchArg.startsWith('bug/') || branchArg.startsWith('branch/')) {
+  } else if (
+    branchArg.startsWith('feature/') ||
+    branchArg.startsWith('bug/') ||
+    branchArg.startsWith('branch/')
+  ) {
     // Use shared logic to clean branch argument
     branch = cleanBranchArg(branchArg);
   } else {

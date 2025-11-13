@@ -3,7 +3,13 @@ import { join } from 'path';
 import { load as loadYaml } from 'js-yaml';
 import { getTerminalSessionConfigDir } from './config.js';
 import { GhwtConfig } from '../types.js';
-import { SessionConfig, WindowConfig, TabConfig, TerminalSessionManager, isUIAvailable } from './terminal-session-base.js';
+import {
+  SessionConfig,
+  WindowConfig,
+  TabConfig,
+  TerminalSessionManager,
+  isUIAvailable,
+} from './terminal-session-base.js';
 import { validateSessionConfig } from './schemas.js';
 import { cleanBranchArg } from './paths.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';

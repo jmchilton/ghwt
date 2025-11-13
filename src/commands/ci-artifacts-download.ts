@@ -45,7 +45,13 @@ export async function ciDownloadCommand(
 
   for (const wt of targetWorktrees) {
     // Get note to check for PR/CI data
-    const notePath = join(vaultRoot, 'projects', wt.project, 'worktrees', wt.branch.replace(/\//g, '-') + '.md');
+    const notePath = join(
+      vaultRoot,
+      'projects',
+      wt.project,
+      'worktrees',
+      wt.branch.replace(/\//g, '-') + '.md',
+    );
 
     if (!existsSync(notePath)) {
       if (options?.verbose) {

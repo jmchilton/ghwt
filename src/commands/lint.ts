@@ -12,7 +12,11 @@ interface LintResult {
   passedChecks: string[];
 }
 
-export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: boolean; configOnly?: boolean }): Promise<void> {
+export async function lintCommand(options?: {
+  verbose?: boolean;
+  sessionOnly?: boolean;
+  configOnly?: boolean;
+}): Promise<void> {
   const result: LintResult = {
     errors: [],
     warnings: [],
@@ -53,8 +57,11 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
       if (!existsSync(configDir)) {
         result.warnings.push(`Session config directory not found: ${configDir}`);
       } else {
-        const sessionFiles = readdirSync(configDir).filter((f) =>
-          f.endsWith('.ghwt-session.yaml') || f.endsWith('.ghwt-session.yml') || f.endsWith('.ghwt-session.json'),
+        const sessionFiles = readdirSync(configDir).filter(
+          (f) =>
+            f.endsWith('.ghwt-session.yaml') ||
+            f.endsWith('.ghwt-session.yml') ||
+            f.endsWith('.ghwt-session.json'),
         );
 
         if (sessionFiles.length === 0) {
@@ -128,8 +135,9 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
     if (!existsSync(projectsDir)) {
       result.warnings.push(`Projects directory not found in vault: ${projectsDir}`);
     } else {
-      const projectDirs = readdirSync(projectsDir)
-        .filter((name) => statSync(join(projectsDir, name)).isDirectory());
+      const projectDirs = readdirSync(projectsDir).filter((name) =>
+        statSync(join(projectsDir, name)).isDirectory(),
+      );
 
       let totalNotes = 0;
       let validNotes = 0;
@@ -194,15 +202,16 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
       } catch (importError) {
         result.errors.push(
           `Failed to load gh-ci-artifacts for CI config validation. ` +
-          `Install it with: npm install gh-ci-artifacts`,
+            `Install it with: npm install gh-ci-artifacts`,
         );
         configSchema = null;
       }
 
       if (configSchema) {
         // Find all project subdirectories
-        const projectDirs = readdirSync(ciConfigDir)
-          .filter((name) => statSync(join(ciConfigDir, name)).isDirectory());
+        const projectDirs = readdirSync(ciConfigDir).filter((name) =>
+          statSync(join(ciConfigDir, name)).isDirectory(),
+        );
 
         let totalConfigs = 0;
         let validConfigs = 0;
@@ -219,7 +228,9 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
               totalConfigs++;
               try {
                 const content = readFileSync(configPath, 'utf-8');
-                const parsed = configPath.endsWith('.json') ? JSON.parse(content) : loadYaml(content);
+                const parsed = configPath.endsWith('.json')
+                  ? JSON.parse(content)
+                  : loadYaml(content);
 
                 const validation = configSchema.safeParse(parsed);
                 if (validation.success) {
@@ -231,7 +242,9 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
                       return `    ${pathStr}: ${issue.message}`;
                     })
                     .join('\n');
-                  result.errors.push(`CI config ${projDir}/.gh-ci-artifacts.* is invalid:\n${details}`);
+                  result.errors.push(
+                    `CI config ${projDir}/.gh-ci-artifacts.* is invalid:\n${details}`,
+                  );
                 }
               } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
@@ -279,9 +292,13 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
   }
 
   if (result.errors.length > 0) {
-    console.log(`❌ Linting failed: ${result.errors.length} error${result.errors.length !== 1 ? 's' : ''}, ${result.warnings.length} warning${result.warnings.length !== 1 ? 's' : ''}`);
+    console.log(
+      `❌ Linting failed: ${result.errors.length} error${result.errors.length !== 1 ? 's' : ''}, ${result.warnings.length} warning${result.warnings.length !== 1 ? 's' : ''}`,
+    );
     process.exit(1);
   } else {
-    console.log(`⚠️  Linting completed with ${result.warnings.length} warning${result.warnings.length !== 1 ? 's' : ''}`);
+    console.log(
+      `⚠️  Linting completed with ${result.warnings.length} warning${result.warnings.length !== 1 ? 's' : ''}`,
+    );
   }
 }

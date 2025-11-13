@@ -52,7 +52,12 @@ export interface TerminalSessionManager {
   /**
    * Create session with configured windows and panes
    */
-  createSession(sessionName: string, config: SessionConfig, worktreePath: string, notePath?: string): Promise<void>;
+  createSession(
+    sessionName: string,
+    config: SessionConfig,
+    worktreePath: string,
+    notePath?: string,
+  ): Promise<void>;
 
   /**
    * Launch terminal UI attached to session
@@ -147,7 +152,9 @@ export function substituteVariables(text: string, vars: TemplateVars): string {
  * Normalize session config to always have tabs structure
  * Converts legacy windows-only config to tabs format for backward compatibility
  */
-export function normalizeSessionConfig(config: SessionConfig): SessionConfig & { tabs: TabConfig[] } {
+export function normalizeSessionConfig(
+  config: SessionConfig,
+): SessionConfig & { tabs: TabConfig[] } {
   // If tabs already exist, use them
   if (config.tabs && config.tabs.length > 0) {
     return config as SessionConfig & { tabs: TabConfig[] };

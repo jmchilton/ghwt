@@ -41,4 +41,3 @@ export async function cursorCommand(
     process.exit(1);
   }
 }
-
