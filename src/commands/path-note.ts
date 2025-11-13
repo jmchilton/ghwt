@@ -1,6 +1,6 @@
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
-import { loadProjectPaths, getNotePath, parseBranchFromOldFormat } from '../lib/paths.js';
+import { loadProjectPaths, getNotePath } from '../lib/paths.js';
 import { expandPath } from '../lib/config.js';
 
 export async function pathNoteCommand(
@@ -36,11 +36,10 @@ export async function pathNoteCommand(
   }
 
   const { config } = loadProjectPaths();
-  const { name } = parseBranchFromOldFormat(selectedBranch);
 
-  // For notes, use just the name (note path doesn't need type prefix)
+  // getNotePath handles parsing the branch reference to extract the name
   const vaultRoot = expandPath(config.vaultPath);
-  const notePath = getNotePath(vaultRoot, selectedProject, name);
+  const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);
 
   // Output path
   // Exit code is always 0 (machine-readable output)

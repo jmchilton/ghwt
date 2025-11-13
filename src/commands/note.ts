@@ -35,6 +35,8 @@ export async function noteCommand(
   }
 
   const { vaultRoot } = loadProjectPaths();
+
+  // getNotePath handles parsing the branch reference to extract the name
   const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);
 
   // Check if note exists

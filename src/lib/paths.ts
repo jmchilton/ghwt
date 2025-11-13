@@ -57,10 +57,25 @@ export function parseBranchFromOldFormat(branch: string): {
 }
 
 /**
+ * Get the note filename for a branch, handling type prefix parsing
+ * Extracts the branch name from type-prefixed references and normalizes it
+ * @example getNoteFileName('branch/main') -> 'main.md'
+ * @example getNoteFileName('pr/1234') -> '1234.md'
+ * @example getNoteFileName('main') -> 'main.md'
+ * @example getNoteFileName('feature/cool-stuff') -> 'cool-stuff.md'
+ */
+export function getNoteFileName(branch: string): string {
+  const { name } = parseBranchFromOldFormat(branch);
+  return `${normalizeBundle(name)}.md`;
+}
+
+/**
  * Get the full path to a worktree note file
+ * @example getNotePath(vaultRoot, 'galaxy', 'branch/main') -> '.../projects/galaxy/worktrees/main.md'
+ * @example getNotePath(vaultRoot, 'galaxy', 'pr/1234') -> '.../projects/galaxy/worktrees/1234.md'
  */
 export function getNotePath(vaultRoot: string, project: string, branch: string): string {
-  return join(vaultRoot, 'projects', project, 'worktrees', `${normalizeBundle(branch)}.md`);
+  return join(vaultRoot, 'projects', project, 'worktrees', getNoteFileName(branch));
 }
 
 /**

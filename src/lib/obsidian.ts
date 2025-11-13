@@ -3,6 +3,7 @@ import { dirname } from 'path';
 import YAML from 'js-yaml';
 import { NoteFrontmatter, WorktreeMetadata } from '../types.js';
 import { loadConfig } from './config.js';
+import { getNoteFileName } from './paths.js';
 
 export interface NoteContent {
   frontmatter: NoteFrontmatter;
@@ -179,9 +180,10 @@ export function calculateDaysSinceActivity(notePath: string): number {
 
 /**
  * Get Obsidian URL to open a note
- * @example getObsidianNoteUrl('galaxy', 'feature/main') => 'obsidian://open?vault=projects&file=projects/galaxy/worktrees/feature-main.md'
+ * @example getObsidianNoteUrl('galaxy', 'branch/main') => 'obsidian://open?vault=projects&file=projects/galaxy/worktrees/main.md'
+ * @example getObsidianNoteUrl('galaxy', 'pr/1234') => 'obsidian://open?vault=projects&file=projects/galaxy/worktrees/1234.md'
  */
 export function getObsidianNoteUrl(project: string, branch: string): string {
-  const normalizedBranch = branch.replace(/\//g, '-');
-  return `obsidian://open?vault=projects&file=projects/${project}/worktrees/${normalizedBranch}.md`;
+  const noteFileName = getNoteFileName(branch);
+  return `obsidian://open?vault=projects&file=projects/${project}/worktrees/${noteFileName}`;
 }
