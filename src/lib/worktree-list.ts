@@ -17,72 +17,75 @@ export interface WorktreeContext {
 
 /**
  * Get list of all worktrees, optionally filtered by project
+ * Scans new hierarchical structure: worktrees/{project}/{branchType}/{name}
  */
 export function listWorktrees(filterProject?: string): WorktreeInfo[] {
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
-  const repositoriesRoot = join(projectsRoot, config.repositoriesDir || 'repositories');
 
   if (!existsSync(worktreesRoot)) {
     return [];
   }
 
-  // Get list of actual project names from repositories
-  let projectNames: string[] = [];
-  if (existsSync(repositoriesRoot)) {
-    try {
-      projectNames = readdirSync(repositoriesRoot, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name)
-        .sort((a, b) => b.length - a.length); // Sort by length descending for longest match
-    } catch (error) {
-      console.error(`Failed to list repositories: ${error}`);
-    }
-  }
-
   const worktrees: WorktreeInfo[] = [];
 
   try {
-    const entries = readdirSync(worktreesRoot, { withFileTypes: true });
+    const projectEntries = readdirSync(worktreesRoot, { withFileTypes: true });
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+    for (const projectEntry of projectEntries) {
+      if (!projectEntry.isDirectory()) continue;
 
-      // Parse worktree name by matching against known project names
-      let project = '';
-      let branch = '';
-
-      // Find matching project name (use longest match to handle "galaxy" vs "galaxy-architecture")
-      for (const projectName of projectNames) {
-        if (entry.name.startsWith(projectName + '-')) {
-          project = projectName;
-          const remainder = entry.name.slice(projectName.length + 1); // +1 for the hyphen
-          branch = remainder.replace(/-/g, '/'); // Convert hyphens back to slashes
-          break;
-        }
-      }
-
-      // Fallback if project not found in repositories
-      if (!project) {
-        const parts = entry.name.split('-');
-        if (parts.length < 2) continue;
-        project = parts[0];
-        branch = parts.slice(1).join('/');
-      }
+      const project = projectEntry.name;
 
       // Apply project filter if provided
       if (filterProject && project !== filterProject) {
         continue;
       }
 
-      const path = join(worktreesRoot, entry.name);
-      worktrees.push({
-        project,
-        branch,
-        path,
-        displayName: `${project}: ${branch}`,
-      });
+      const projectPath = join(worktreesRoot, project);
+
+      try {
+        const branchTypeEntries = readdirSync(projectPath, { withFileTypes: true });
+
+        for (const branchTypeEntry of branchTypeEntries) {
+          if (!branchTypeEntry.isDirectory()) continue;
+
+          const branchType = branchTypeEntry.name;
+
+          // Only process valid branch types
+          if (branchType !== 'branch' && branchType !== 'pr') {
+            continue;
+          }
+
+          const branchTypePath = join(projectPath, branchType);
+
+          try {
+            const nameEntries = readdirSync(branchTypePath, { withFileTypes: true });
+
+            for (const nameEntry of nameEntries) {
+              if (!nameEntry.isDirectory()) continue;
+
+              const name = nameEntry.name;
+              const path = join(branchTypePath, name);
+              const branch = `${branchType}/${name}`;
+
+              worktrees.push({
+                project,
+                branch,
+                path,
+                displayName: `${project}: ${branch}`,
+              });
+            }
+          } catch {
+            // Skip branch type directories that can't be read
+            continue;
+          }
+        }
+      } catch {
+        // Skip project directories that can't be read
+        continue;
+      }
     }
 
     // Sort by project, then by branch
@@ -108,12 +111,13 @@ export function formatWorktreeForDisplay(info: WorktreeInfo): string {
 
 /**
  * Resolve a branch name by checking the filesystem.
- * Makes the branch type prefix (feature/, bug/, branch/, pr/) optional at runtime.
+ * Works with new hierarchical structure: worktrees/{project}/{branchType}/{name}
  *
  * Examples:
  * - resolveBranch('galaxy', 'structured_tool_state') -> 'branch/structured_tool_state'
- * - resolveBranch('galaxy', 'feature-main') -> 'feature/main'
- * - resolveBranch('galaxy', 'feature/main') -> 'feature/main' (passthrough)
+ * - resolveBranch('galaxy', 'cool-feature') -> 'branch/cool-feature'
+ * - resolveBranch('galaxy', '1234') -> 'pr/1234'
+ * - resolveBranch('galaxy', 'branch/cool-feature') -> 'branch/cool-feature' (passthrough)
  *
  * @returns The resolved branch name with prefix, or the input if no match found
  */
@@ -121,9 +125,10 @@ export function resolveBranch(project: string, branchInput: string): string {
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const worktreesRoot = join(projectsRoot, config.worktreesDir);
+  const projectPath = join(worktreesRoot, project);
 
-  if (!existsSync(worktreesRoot)) {
-    return branchInput; // Fallback to input if worktrees root doesn't exist
+  if (!existsSync(projectPath)) {
+    return branchInput; // Fallback to input if project path doesn't exist
   }
 
   // If the input already has a prefix, return as-is
@@ -137,40 +142,34 @@ export function resolveBranch(project: string, branchInput: string): string {
   }
 
   try {
-    const entries = readdirSync(worktreesRoot, { withFileTypes: true });
+    // Determine if input looks like a PR number (all digits)
+    const isPRInput = /^\d+$/.test(branchInput);
 
-    // Convert input to directory name pattern (replace / with -)
-    const normalizedInput = branchInput.replace(/\//g, '-');
-
-    // Try matching in order: feature, bug, branch, pr
-    const typePrefixes = ['feature', 'bug', 'branch', 'pr'];
-
-    for (const type of typePrefixes) {
-      const expectedDirName = `${project}-${type}-${normalizedInput}`;
-      if (entries.some((e) => e.isDirectory() && e.name === expectedDirName)) {
-        return `${type}/${branchInput.replace(/-/g, '/')}`;
+    // Try to find matching directory
+    if (isPRInput) {
+      // Look in pr/ directory
+      const prPath = join(projectPath, 'pr');
+      if (existsSync(prPath)) {
+        const entries = readdirSync(prPath, { withFileTypes: true });
+        if (entries.some((e) => e.isDirectory() && e.name === branchInput)) {
+          return `pr/${branchInput}`;
+        }
       }
-    }
+    } else {
+      // Look in branch/ directory
+      const branchPath = join(projectPath, 'branch');
+      if (existsSync(branchPath)) {
+        const entries = readdirSync(branchPath, { withFileTypes: true });
 
-    // Fallback: look for any directory matching project-<anything>-input
-    // This handles cases where the input itself contains hyphens
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+        // Try exact match first
+        if (entries.some((e) => e.isDirectory() && e.name === branchInput)) {
+          return `branch/${branchInput}`;
+        }
 
-      const expectedPrefix = `${project}-`;
-      if (!entry.name.startsWith(expectedPrefix)) continue;
-
-      const remainder = entry.name.slice(expectedPrefix.length);
-
-      // Try to match by extracting type and comparing the rest
-      const parts = remainder.split('-');
-      if (parts.length >= 2) {
-        const type = parts[0];
-        if (['feature', 'bug', 'branch', 'pr'].includes(type)) {
-          const nameFromDir = parts.slice(1).join('-');
-          if (nameFromDir === normalizedInput) {
-            return `${type}/${nameFromDir.replace(/-/g, '/')}`;
-          }
+        // Try matching with normalization (convert / to -)
+        const normalizedInput = branchInput.replace(/\//g, '-');
+        if (entries.some((e) => e.isDirectory() && e.name === normalizedInput)) {
+          return `branch/${branchInput}`;
         }
       }
     }
