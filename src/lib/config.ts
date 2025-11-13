@@ -51,6 +51,10 @@ export function expandPath(path: string): string {
 }
 
 export function getCiArtifactsDir(config: GhwtConfig): string {
+  return join(expandPath(config.projectsRoot), 'ci-artifacts');
+}
+
+export function getCiArtifactsConfigDir(config: GhwtConfig): string {
   return join(expandPath(config.projectsRoot), 'ci-artifacts-config');
 }
 

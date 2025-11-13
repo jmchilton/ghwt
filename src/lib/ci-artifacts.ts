@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { expandPath } from './config.js';
+import { expandPath, getCiArtifactsConfigDir } from './config.js';
 import { WorktreeMetadata } from '../types.js';
 import { loadConfig } from './config.js';
 import { runAction, loadConfig as loadGhCiArtifactsConfig, Logger } from 'gh-ci-artifacts';
@@ -12,8 +12,7 @@ interface CISummary {
 
 export function findCIConfigFile(repoName: string): string | null {
   const config = loadConfig();
-  const projectsRoot = expandPath(config.projectsRoot);
-  const configDir = join(projectsRoot, 'ci-artifacts-config');
+  const configDir = getCiArtifactsConfigDir(config);
 
   // Check for .gh-ci-artifacts.yaml, .gh-ci-artifacts.yml, or .gh-ci-artifacts.json
   const configFiles = [

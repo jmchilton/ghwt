@@ -2,7 +2,7 @@ import { join } from 'path';
 import { existsSync, rmSync, readdirSync } from 'fs';
 import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
 import { listWorktrees } from '../lib/worktree-list.js';
-import { readNote } from '../lib/obsidian.js';
+import { readNote, writeNote } from '../lib/obsidian.js';
 import { getCIArtifactsPath } from '../lib/ci-artifacts.js';
 
 export async function ciCleanCommand(
@@ -71,6 +71,23 @@ export async function ciCleanCommand(
           console.log(`  🗑️  Deleting: ${ciArtifactsPath}`);
         }
         rmSync(ciArtifactsPath, { recursive: true, force: true });
+
+        // Clear CI metadata from note so sync will redownload on next run
+        const note = readNote(notePath);
+        const keysToDelete = [
+          'ci_status',
+          'ci_failed_tests',
+          'ci_linter_errors',
+          'ci_artifacts_path',
+          'ci_viewer_url',
+          'ci_last_synced',
+          'ci_head_sha',
+        ];
+        keysToDelete.forEach((key) => {
+          delete note.frontmatter[key];
+        });
+        writeNote(notePath, note.frontmatter, note.body);
+
         console.log(`✅ Cleaned: ${wt.displayName}`);
         cleanedCount++;
       } catch (error) {
