@@ -15,6 +15,7 @@ describe('Init command: end-to-end workspace initialization', () => {
   let configPath: string;
   const originalCwd = process.cwd();
   const originalEnv = process.env.GHWT_CONFIG;
+  const originalExit = process.exit;
 
   beforeEach(() => {
     testRoot = mkdtempSync(join(tmpdir(), 'ghwt-init-e2e-'));
@@ -22,12 +23,19 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     // Point GHWT_CONFIG to test config file
     process.env.GHWT_CONFIG = configPath;
+
+    // Mock process.exit to throw error instead
+    const mockExit = (code: number) => {
+      throw new Error(`process.exit(${code})`);
+    };
+    (process.exit as unknown as typeof process.exit) = mockExit;
   });
 
   afterEach(() => {
     // Restore original environment
     process.chdir(originalCwd);
     process.env.GHWT_CONFIG = originalEnv;
+    process.exit = originalExit;
 
     // Clean up test directory
     try {
@@ -119,7 +127,7 @@ describe('Init command: end-to-end workspace initialization', () => {
     expect(dashboardContent.includes('days_since_activity > 7')).toBeTruthy();
   });
 
-  it('is idempotent - can run twice without errors', async () => {
+  it('rejects second init with same config path', async () => {
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
 
@@ -129,22 +137,26 @@ describe('Init command: end-to-end workspace initialization', () => {
       vaultPath,
     });
 
-    const firstDirs = readdirSync(projectsRoot);
+    expect(existsSync(configPath)).toBeTruthy();
 
-    // Run init again
-    await initCommand({
-      projectsRoot,
-      vaultPath,
-    });
-
-    const secondDirs = readdirSync(projectsRoot);
-
-    // Verify same directories exist after second run
-    expect(firstDirs).toEqual(secondDirs);
-
-    // Verify directories still exist
+    // Verify directories exist after first run
     expect(existsSync(join(projectsRoot, 'repositories'))).toBeTruthy();
     expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
+
+    // Try to run init again - should fail
+    let exitErrorThrown = false;
+    try {
+      await initCommand({
+        projectsRoot,
+        vaultPath,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'process.exit(1)') {
+        exitErrorThrown = true;
+      }
+    }
+
+    expect(exitErrorThrown).toBeTruthy();
   });
 
   it('handles custom project paths with ~ expansion', async () => {
@@ -260,20 +272,28 @@ describe('Init command: end-to-end workspace initialization', () => {
     expect(dashboardContent.includes('created:')).toBeTruthy();
   });
 
-  it('multiple concurrent initializations with same paths work correctly', async () => {
+  it('allows re-initialization with different GHWT_CONFIG paths', async () => {
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
 
-    // Run init twice concurrently (simulating concurrent calls)
-    await Promise.all([
-      initCommand({ projectsRoot, vaultPath }),
-      initCommand({ projectsRoot, vaultPath }),
-    ]);
+    // First initialization
+    await initCommand({ projectsRoot, vaultPath });
+    expect(existsSync(configPath)).toBeTruthy();
 
-    // Verify structure is intact
-    expect(existsSync(join(projectsRoot, 'repositories'))).toBeTruthy();
-    expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
-    expect(existsSync(join(vaultPath, 'dashboard.md'))).toBeTruthy();
+    // Change GHWT_CONFIG to a different path for second initialization
+    const configPath2 = join(testRoot, '.ghwtrc2.json');
+    process.env.GHWT_CONFIG = configPath2;
+
+    const projectsRoot2 = join(testRoot, 'projects2');
+    const vaultPath2 = join(testRoot, 'vault2');
+
+    // Second initialization with different config path should succeed
+    await initCommand({ projectsRoot: projectsRoot2, vaultPath: vaultPath2 });
+    expect(existsSync(configPath2)).toBeTruthy();
+
+    // Both configs should exist
+    expect(existsSync(configPath)).toBeTruthy();
+    expect(existsSync(configPath2)).toBeTruthy();
   });
 
   it('preserves existing directories without errors', async () => {
@@ -300,5 +320,70 @@ describe('Init command: end-to-end workspace initialization', () => {
     expect(existsSync(testFile)).toBeTruthy();
     const content = readFileSync(testFile, 'utf-8');
     expect(content).toBe('test content');
+  });
+
+  it('bails out if config file already exists', async () => {
+    const projectsRoot = join(testRoot, 'projects');
+    const vaultPath = join(testRoot, 'vault');
+
+    // Run init first time
+    await initCommand({
+      projectsRoot,
+      vaultPath,
+    });
+
+    // Verify config was created
+    expect(existsSync(configPath)).toBeTruthy();
+
+    // Try to run init again - should throw process.exit error
+    let exitErrorThrown = false;
+    try {
+      await initCommand({
+        projectsRoot,
+        vaultPath,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'process.exit(1)') {
+        exitErrorThrown = true;
+      }
+    }
+
+    expect(exitErrorThrown).toBeTruthy();
+  });
+
+  it('includes terminal multiplexer in config if detected', async () => {
+    const projectsRoot = join(testRoot, 'projects');
+    const vaultPath = join(testRoot, 'vault');
+
+    await initCommand({
+      projectsRoot,
+      vaultPath,
+    });
+
+    const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
+
+    // Config may or may not have terminal multiplexer depending on system
+    // but if it does, it should be valid
+    if (configContent.terminalMultiplexer) {
+      expect(['tmux', 'zellij'].includes(configContent.terminalMultiplexer)).toBeTruthy();
+    }
+  });
+
+  it('includes terminal UI in config if detected', async () => {
+    const projectsRoot = join(testRoot, 'projects');
+    const vaultPath = join(testRoot, 'vault');
+
+    await initCommand({
+      projectsRoot,
+      vaultPath,
+    });
+
+    const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
+
+    // Config may or may not have terminal UI depending on system
+    // but if it does, it should be valid
+    if (configContent.terminalUI) {
+      expect(['wezterm', 'ghostty'].includes(configContent.terminalUI)).toBeTruthy();
+    }
   });
 });

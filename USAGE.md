@@ -9,9 +9,24 @@ ghwt init --vault-path ~/my-obsidian-vault
 ```
 
 Creates:
+
 - `~/projects/repositories/` - Bare git repos
 - `~/projects/worktrees/` - Active development directories
 - Dashboard in Obsidian vault
+
+**Terminal Detection:**
+
+During init, ghwt automatically detects:
+
+- **Terminal Multiplexer**: Looks for `zellij` (preferred) or `tmux`
+  - Warns if neither is found (but init completes successfully)
+  - Saves detected tool to config for use with terminal sessions
+
+- **Terminal UI**: Looks for `ghostty` (preferred) or `wezterm`
+  - Saves detected tool to config if found
+  - Omits from config if none found
+
+**Note:** To prevent accidental re-initialization, `ghwt init` will bail out with an error if a config file already exists. Use `GHWT_CONFIG` environment variable to point to a different config path if you want multiple workspace configurations.
 
 ### 2. Clone a repository
 
@@ -41,6 +56,7 @@ ghwt clone https://github.com/owner/repo.git --no-fork-check
 ```
 
 **Clone Options:**
+
 - `--upstream <url>` - Add upstream remote (skips auto-fork detection)
 - `--no-push` - Disable push to origin (force pushes to upstream instead)
 - `--no-fork-check` - Skip automatic fork detection (if gh CLI is not authenticated)
@@ -54,6 +70,7 @@ ghwt create galaxy fix/bug-123      # Branch with slashes
 ```
 
 Automatically:
+
 - Creates or checks out the branch
 - Generates Obsidian note with rich metadata
 - Opens VS Code + Obsidian (if available)
@@ -84,6 +101,7 @@ ghwt sync --verbose                 # See detailed output
 ```
 
 Updates:
+
 - Commits ahead/behind
 - Uncommitted changes
 - PR state, CI status, reviews
@@ -91,6 +109,7 @@ Updates:
 - CI artifacts (for failing PRs)
 
 Recreates missing items:
+
 - Notes (if deleted but worktree exists)
 - Terminal sessions (if crashed/killed)
 
@@ -103,6 +122,7 @@ ghwt rm                             # Pick any worktree
 ```
 
 Automatically:
+
 - Deletes worktree directory
 - Prunes git registry
 - Archives Obsidian note
@@ -146,6 +166,7 @@ Automatically:
 All convenience commands support three modes:
 
 **Mode 1: Pick from all worktrees**
+
 ```bash
 ghwt code              # → Interactive picker
 ghwt note
@@ -155,12 +176,14 @@ ghwt claude
 ```
 
 **Mode 2: Filter by project**
+
 ```bash
 ghwt code galaxy       # → Pick only galaxy worktrees
 ghwt note training-material
 ```
 
 **Mode 3: Direct access**
+
 ```bash
 ghwt code galaxy cool-feature  # → Open directly (no picker)
 ghwt note gxformat2 1234
@@ -168,6 +191,7 @@ ghwt gh artifact-detective feature
 ```
 
 **Mode 4: Use current worktree**
+
 ```bash
 ghwt code --this       # → Use current worktree (must be inside one)
 ghwt note --this
@@ -191,6 +215,7 @@ ghwt attach galaxy new-feature
 ```
 
 Configure sessions in `~/.ghwtrc.json`:
+
 - `terminalMultiplexer`: "tmux" (default) or "zellij"
 - `terminalUI`: "wezterm" (default) or "none"
 
@@ -276,6 +301,7 @@ windows:
 ```
 
 **Template variables:**
+
 - `{{worktree_path}}` - Full path to worktree
 - `{{project}}` - Project name
 - `{{branch}}` - Branch name (with slashes normalized)
@@ -332,6 +358,7 @@ ghwt code --this
 ### "Not in a ghwt worktree directory"
 
 The `--this` flag only works when you're inside a worktree. Make sure you're in:
+
 ```
 ~/projects/worktrees/{project}/{branch-or-pr}/{name}/
 ```
@@ -339,6 +366,7 @@ The `--this` flag only works when you're inside a worktree. Make sure you're in:
 ### Session not launching
 
 Check if session config exists and is valid:
+
 ```bash
 ghwt lint
 # → Validates all configs
@@ -349,12 +377,14 @@ Create a config file or use `_default.ghwt-session.yaml` as fallback.
 ### CI artifacts not downloading
 
 Check if PR is actually failing:
+
 ```bash
 ghwt sync --verbose galaxy
 # → Shows detailed CI status
 ```
 
 Manually trigger download:
+
 ```bash
 ghwt ci-artifacts-download galaxy 1234
 # → Force download specific PR

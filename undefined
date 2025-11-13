@@ -1,0 +1,9 @@
+{
+  "projectsRoot": "/var/folders/1d/bs7mkcjx4t79x1rgbr2ns5br5ng4yk/T/ghwt-init-e2e-4Rz063/projects",
+  "repositoriesDir": "repositories",
+  "worktreesDir": "worktrees",
+  "vaultPath": "/var/folders/1d/bs7mkcjx4t79x1rgbr2ns5br5ng4yk/T/ghwt-init-e2e-4Rz063/vault",
+  "syncInterval": null,
+  "terminalMultiplexer": "tmux",
+  "terminalUI": "wezterm"
+}

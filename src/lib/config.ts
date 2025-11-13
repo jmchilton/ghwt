@@ -8,7 +8,7 @@ import { validateGhwtConfig } from './schemas.js';
  * Get the config file path
  * Respects GHWT_CONFIG env var, defaults to ~/.ghwtrc.json
  */
-function getConfigFilePath(): string {
+export function getConfigFilePath(): string {
   if (process.env.GHWT_CONFIG) {
     return process.env.GHWT_CONFIG;
   }

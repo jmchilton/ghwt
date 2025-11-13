@@ -6,6 +6,7 @@
 **Progress:** 15 of 15 phases complete (100%)
 
 ### Completed Phases
+
 - ✅ Phase 1: getCurrentWorktreeContext() implementation
 - ✅ Phase 2: Test infrastructure setup
 - ✅ Phase 3: Smoke test script
@@ -31,17 +32,20 @@
 ### What Was Done
 
 #### Phase 1-2: Foundation & Testing
+
 - **getCurrentWorktreeContext()**: Uses `git rev-parse --show-toplevel` to find git root, then walks up directory tree to match `worktrees/{project}/{type}/{name}` pattern
 - **Test infrastructure**: Created `paths.test.ts` and `worktree-list.test.ts` with 12 passing tests
 - **Smoke test**: Added `scripts/smoke-test.sh` with npm script
 
 #### Phase 4: Branch Parser
+
 - New `src/lib/branch-parser.ts` module with TDD approach
 - `parseBranchArg()` detects PR (numeric) vs branch (alphanumeric)
 - Rejects old prefixes (feature/, bug/, pr/) with helpful error messages
 - 7 comprehensive unit tests, all passing
 
 #### Phase 5-6: Path Construction & Create Command
+
 - Updated `getWorktreePath()` signature: `(projectsRoot, config, project, branchType, name)`
 - New hierarchy: `worktrees/{project}/{branch|pr}/{name}`
 - Added `parseBranchFromOldFormat()` helper for backward compatibility during transition
@@ -49,6 +53,7 @@
 - **CLI now:** `ghwt create galaxy cool-feature` or `ghwt create galaxy 1234` (no prefixes)
 
 #### Phase 8: --this Flag (All Commands)
+
 - Implemented `--this` flag pattern across convenience commands:
   - ✅ code, cursor, gh, note, attach, claude
   - ✅ Pattern: Detect context with `getCurrentWorktreeContext()` when `--this` flag is set
@@ -56,11 +61,13 @@
 - Reduced code duplication through consistent pattern
 
 #### All Commands Updated
+
 - Updated `code.ts`, `cursor.ts`, `attach.ts`, `attach-pr.ts`, `claude.ts`, `gh.ts`, `note.ts`, `rm.ts`
 - Each command now calls `parseBranchFromOldFormat()` to convert old branch format to new `{branchType, name}` pair
 - All commands use new `getWorktreePath()` signature
 
 ### Test Results
+
 ```
 ✅ 12/12 tests passing
 ✅ All linting clean
@@ -69,6 +76,7 @@
 ```
 
 ### Key Files Modified
+
 - `src/lib/worktree-list.ts` - Added `getCurrentWorktreeContext()`
 - `src/lib/paths.ts` - Updated `getWorktreePath()`, added `parseBranchFromOldFormat()`
 - `src/lib/branch-parser.ts` - NEW module

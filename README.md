@@ -7,7 +7,7 @@ Worktree-centered development task dashboard with Obsidian integration.
 - **Worktree Management**: Create, track, and remove git worktrees for branches and PRs
 - **Worktree Picker**: Interactive CLI menu for quick selection with fuzzy search and smart filtering
 - **Convenience Commands**: Quick access to code editor, notes, GitHub, terminal sessions, and Claude
-- **Terminal Sessions**: WezTerm + tmux integration with per-repo session configs (dev server, testing, interactive shells)
+- **Terminal Sessions**: Auto-detects and configures zellij/tmux + ghostty/wezterm for per-repo session configs (dev server, testing, interactive shells)
 - **Claude Sessions**: Per-worktree Claude Code conversations with independent history and resume support
 - **CI Artifact Integration**: Auto-fetch GitHub Actions artifacts for failing PRs with smart resume mode
 - **Obsidian Integration**: Auto-generate markdown notes with rich metadata for each worktree
