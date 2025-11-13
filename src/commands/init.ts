@@ -4,6 +4,7 @@ import { execa } from 'execa';
 import { expandPath, saveConfig, getConfigFilePath } from '../lib/config.js';
 import { GhwtConfig } from '../types.js';
 import { writeNote } from '../lib/obsidian.js';
+import { setupAgentCommands } from '../lib/agent-commands.js';
 
 async function detectTerminalMultiplexer(): Promise<'zellij' | 'tmux' | null> {
   const tools = ['zellij', 'tmux'];
@@ -152,6 +153,10 @@ SORT pr_updated_at DESC
     writeNote(dashboardPath, dashboardFrontmatter, dashboardBody);
     console.log(`✅ Dashboard template created at ${dashboardPath}`);
   }
+
+  // Set up Claude agent slash commands
+  console.log('\n🤖 Setting up Claude slash commands...');
+  await setupAgentCommands();
 
   console.log('\n✨ Initialization complete!');
   console.log('\nNext steps:');

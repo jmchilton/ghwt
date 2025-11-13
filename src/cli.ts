@@ -20,6 +20,7 @@ import { ciCleanCommand } from './commands/ci-artifacts-clean.js';
 import { ciDownloadCommand } from './commands/ci-artifacts-download.js';
 import { pathCiArtifactsCommand } from './commands/path-ci-artifacts.js';
 import { pathNoteCommand } from './commands/path-note.js';
+import { updateAgentCommandsCommand } from './commands/update-agent-commands.js';
 
 const program = new Command();
 
@@ -326,6 +327,19 @@ program
   .action(async (project, branch, options) => {
     try {
       await pathNoteCommand(project, branch, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('update-agent-commands')
+  .description('Update Claude slash commands symlink/copy')
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (options) => {
+    try {
+      await updateAgentCommandsCommand(options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

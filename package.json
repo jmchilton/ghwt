@@ -10,6 +10,7 @@
   "files": [
     "dist",
     "bin",
+    "agent-commands",
     "README.md",
     "LICENSE"
   ],
