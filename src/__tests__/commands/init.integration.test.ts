@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import { mkdtempSync, rmSync, readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { initCommand } from './init.js';
-import type { GhwtConfig } from '../types.js';
+import { initCommand } from '../../commands/init.js';
+import type { GhwtConfig } from '../../types.js';
 
 /**
  * End-to-end tests for the init command

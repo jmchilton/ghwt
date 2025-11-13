@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { lintCommand } from './lint.js';
-import type { GhwtConfig } from '../types.js';
+import { lintCommand } from '../../commands/lint.js';
+import type { GhwtConfig } from '../../types.js';
 
 /**
  * End-to-end tests for the lint command

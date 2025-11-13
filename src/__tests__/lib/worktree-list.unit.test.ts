@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { listWorktrees, resolveBranch } from './worktree-list.js';
+import { listWorktrees, resolveBranch } from '../../lib/worktree-list.js';
 import { writeFileSync } from 'fs';
 
 describe('worktree-list', () => {

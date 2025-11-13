@@ -4,10 +4,10 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execa } from 'execa';
-import { pathCiArtifactsCommand } from './commands/path-ci-artifacts.js';
-import { pathNoteCommand } from './commands/path-note.js';
-import { getWorktreePath } from './lib/paths.js';
-import type { GhwtConfig } from './types.js';
+import { pathCiArtifactsCommand } from '../commands/path-ci-artifacts.js';
+import { pathNoteCommand } from '../commands/path-note.js';
+import { getWorktreePath } from '../lib/paths.js';
+import type { GhwtConfig } from '../types.js';
 
 /**
  * Tests for path-ci-artifacts and path-note commands

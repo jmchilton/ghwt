@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { getWorktreePath, getNotePath } from './paths.js';
-import { GhwtConfig } from '../types.js';
+import { getWorktreePath, getNotePath } from '../../lib/paths.js';
+import { GhwtConfig } from '../../types.js';
 
 describe('paths', () => {
   const createTestConfig = (worktreesDir = 'worktrees'): GhwtConfig => ({

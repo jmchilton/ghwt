@@ -4,9 +4,9 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execa } from 'execa';
-import { getCurrentWorktreeContext } from './lib/worktree-list.js';
-import { getWorktreePath } from './lib/paths.js';
-import type { GhwtConfig } from './types.js';
+import { getCurrentWorktreeContext } from '../lib/worktree-list.js';
+import { getWorktreePath } from '../lib/paths.js';
+import type { GhwtConfig } from '../types.js';
 
 /**
  * Tests for --this flag functionality

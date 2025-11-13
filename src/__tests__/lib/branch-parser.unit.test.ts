@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { parseBranchArg } from './branch-parser.js';
+import { parseBranchArg } from '../../lib/branch-parser.js';
 
 describe('parseBranchArg', () => {
   it('should detect PR from numeric string', () => {

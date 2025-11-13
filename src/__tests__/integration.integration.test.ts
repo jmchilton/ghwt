@@ -4,8 +4,8 @@ import { mkdtempSync, rmSync, mkdirSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execa } from 'execa';
-import { getWorktreePath, getNotePath } from './lib/paths.js';
-import type { GhwtConfig } from './types.js';
+import { getWorktreePath, getNotePath } from '../lib/paths.js';
+import type { GhwtConfig } from '../types.js';
 
 /**
  * Integration tests for the new hierarchical worktree structure
