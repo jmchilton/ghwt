@@ -168,6 +168,7 @@ export function resolveBranch(project: string, branchInput: string): string {
         }
       }
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // Silently fail and return input
   }

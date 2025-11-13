@@ -9,7 +9,7 @@ interface CleanSessionsOptions {
 }
 
 export async function cleanSessionsCommand(options?: CleanSessionsOptions): Promise<void> {
-  const { worktreesRoot, config } = loadProjectPaths();
+  const { worktreesRoot } = loadProjectPaths();
 
   // Get all worktree directories to determine possible session names
   let worktrees: Array<{ project: string; branch: string }> = [];
@@ -98,7 +98,7 @@ export async function cleanSessionsCommand(options?: CleanSessionsOptions): Prom
   }
 
   // Kill tmux sessions
-  let killed = { tmux: 0, zellij: 0 };
+  const killed = { tmux: 0, zellij: 0 };
   for (const sessionName of sessionsToKill.tmux) {
     try {
       await execa('tmux', ['kill-session', '-t', sessionName]);

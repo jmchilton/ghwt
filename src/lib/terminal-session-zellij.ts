@@ -2,7 +2,6 @@ import { execa } from 'execa';
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { mkdirSync, writeFileSync, openSync } from 'fs';
-import { createHash } from 'crypto';
 import { GhwtConfig } from '../types.js';
 import {
   TerminalSessionManager,

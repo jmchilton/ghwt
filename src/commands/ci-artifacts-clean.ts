@@ -1,9 +1,8 @@
 import { join } from 'path';
-import { existsSync, rmSync, readdirSync } from 'fs';
+import { existsSync, rmSync } from 'fs';
 import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
 import { listWorktrees } from '../lib/worktree-list.js';
 import { readNote, writeNote } from '../lib/obsidian.js';
-import { getCIArtifactsPath } from '../lib/ci-artifacts.js';
 
 export async function ciCleanCommand(
   project?: string,

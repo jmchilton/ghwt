@@ -32,6 +32,7 @@ export class TmuxSessionManager implements TerminalSessionManager {
     sessionName: string,
     config: SessionConfig,
     worktreePath: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     notePath?: string,
   ): Promise<void> {
     const sessionExists = await this.sessionExists(sessionName);

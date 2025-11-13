@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { expandPath, getCiArtifactsConfigDir } from './config.js';
+import { getCiArtifactsConfigDir } from './config.js';
 import { WorktreeMetadata } from '../types.js';
 import { loadConfig } from './config.js';
 import { runAction, loadConfig as loadGhCiArtifactsConfig, Logger } from 'gh-ci-artifacts';

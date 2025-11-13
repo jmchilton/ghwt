@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GhwtConfig, WorktreeMetadata, NoteFrontmatter } from '../types.js';
+import { GhwtConfig, NoteFrontmatter } from '../types.js';
 import { WindowConfig, TabConfig, SessionConfig } from './terminal-session-base.js';
 
 /**

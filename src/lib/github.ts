@@ -42,6 +42,7 @@ export async function getPRRepoUrl(repoPath: string): Promise<string | undefined
     });
 
     return formatGhRepo(originUrl);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     return undefined;
   }

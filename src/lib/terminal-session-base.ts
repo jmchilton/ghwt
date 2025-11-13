@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 export interface WindowConfig {
   name: string;
   root?: string;
@@ -99,7 +101,6 @@ export function shortenSessionName(sessionName: string): string {
   }
 
   // Fall back to hash + keep project prefix
-  const { createHash } = require('crypto');
   const hash = createHash('sha256').update(sessionName).digest('hex').substring(0, 8);
   const project = parts[0] || 'session';
   return `${project}-${hash}`;

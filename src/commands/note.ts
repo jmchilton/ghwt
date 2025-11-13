@@ -8,6 +8,7 @@ import { getObsidianNoteUrl } from '../lib/obsidian.js';
 export async function noteCommand(
   project?: string,
   branch?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   options?: { verbose?: boolean },
 ): Promise<void> {
   let selectedProject = project;

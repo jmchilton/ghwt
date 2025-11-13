@@ -7,6 +7,7 @@ import { assertWorktreeExists } from '../lib/errors.js';
 export async function cursorCommand(
   project?: string,
   branch?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   options?: { verbose?: boolean },
 ): Promise<void> {
   let selectedProject = project;

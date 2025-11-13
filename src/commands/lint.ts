@@ -3,7 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { load as loadYaml } from 'js-yaml';
 import { loadConfig, expandPath } from '../lib/config.js';
-import { validateGhwtConfig, validateSessionConfig, validateNoteFrontmatter } from '../lib/schemas.js';
+import { validateGhwtConfig, validateSessionConfig } from '../lib/schemas.js';
 import { parseFrontmatter } from '../lib/obsidian.js';
 
 interface LintResult {
@@ -190,6 +190,7 @@ export async function lintCommand(options?: { verbose?: boolean; sessionOnly?: b
       try {
         const ghci = await import('gh-ci-artifacts');
         configSchema = ghci.configSchema;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (importError) {
         result.errors.push(
           `Failed to load gh-ci-artifacts for CI config validation. ` +

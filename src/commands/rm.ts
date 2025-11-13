@@ -8,6 +8,7 @@ import { loadProjectPaths, getWorktreePath, getNotePath, normalizeBundle, cleanB
 export async function rmCommand(
   project?: string,
   branch?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   options?: { verbose?: boolean },
 ): Promise<void> {
   // Show picker if project or branch not specified

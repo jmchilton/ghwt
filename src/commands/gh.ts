@@ -30,6 +30,7 @@ function extractPRFromNote(notePath: string): string | null {
 export async function ghCommand(
   project?: string,
   branch?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   options?: { verbose?: boolean },
 ): Promise<void> {
   let selectedProject = project;
@@ -45,7 +46,7 @@ export async function ghCommand(
     selectedBranch = resolveBranch(selectedProject, selectedBranch);
   }
 
-  const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
+  const { reposRoot, vaultRoot } = loadProjectPaths();
 
   const repoPath = join(reposRoot, selectedProject);
   const notePath = getNotePath(vaultRoot, selectedProject, selectedBranch);

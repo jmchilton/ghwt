@@ -12,7 +12,7 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { launchSession } from '../lib/terminal-session.js';
-import { loadProjectPaths, getWorktreePath, getNotePath, cleanBranchArg } from '../lib/paths.js';
+import { getWorktreePath, getNotePath, cleanBranchArg } from '../lib/paths.js';
 import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
 
@@ -24,7 +24,6 @@ export async function createCommand(
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
   const reposRoot = join(projectsRoot, config.repositoriesDir);
-  const worktreesRoot = join(projectsRoot, config.worktreesDir);
   const vaultRoot = expandPath(config.vaultPath);
   const ciArtifactsDir = getCiArtifactsDir(config);
 
