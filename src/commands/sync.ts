@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { existsSync, readdirSync, statSync, mkdirSync } from 'fs';
 import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
-import { getGitInfo } from '../lib/git.js';
+import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
 import { getPRInfo } from '../lib/github.js';
 import {
   readNote,
@@ -93,8 +93,9 @@ export async function syncCommand(
             const prMatch = (frontmatter.pr as string).match(/\/(\d+)$/);
             if (prMatch) {
               const prNumber = prMatch[1];
-              // Get repo context from worktree
-              const repoUrl = gitInfo.remoteUrl;
+              // Get repo context from worktree - prefer upstream for forked repos
+              const upstreamUrl = await getUpstreamUrl(worktreePath);
+              const repoUrl = upstreamUrl || gitInfo.remoteUrl;
               const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
               const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
               const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : proj;
