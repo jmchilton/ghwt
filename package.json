@@ -50,7 +50,7 @@
     "commander": "^11.1.0",
     "enquirer": "^2.4.1",
     "execa": "^8.0.1",
-    "gh-ci-artifacts": "^1.19.0",
+    "gh-ci-artifacts": "^1.20.0",
     "js-yaml": "^4.1.0",
     "prompt-sync": "^4.2.0",
     "zod": "^4.1.12"
