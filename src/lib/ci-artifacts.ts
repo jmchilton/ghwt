@@ -30,12 +30,24 @@ export function findCIConfigFile(repoName: string): string | null {
   return null;
 }
 
+/**
+ * Get the full path to CI artifacts for a worktree using hierarchical structure:
+ * ci-artifacts/{project}/{branchType}/{name}
+ *
+ * @param projectsRoot The projects root directory
+ * @param project Project name
+ * @param branchType 'branch' or 'pr'
+ * @param name Branch name (without type prefix) or PR number
+ * @returns Full path to CI artifacts directory
+ */
 export function getCIArtifactsPath(
-  ciArtifactsDir: string,
-  repoName: string,
-  ref: string | number,
+  projectsRoot: string,
+  project: string,
+  branchType: 'branch' | 'pr',
+  name: string,
 ): string {
-  return join(ciArtifactsDir, repoName, `pr-${ref}`);
+  const ciArtifactsRoot = join(projectsRoot, 'ci-artifacts');
+  return join(ciArtifactsRoot, project, branchType, name);
 }
 
 export function shouldFetchArtifacts(

@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { execa } from 'execa';
-import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
+import { loadConfig, expandPath } from '../lib/config.js';
 import { getGitInfo, isBareRepository, branchExists } from '../lib/git.js';
 import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { createWorktreeNote } from '../lib/obsidian.js';
@@ -26,7 +26,6 @@ export async function createCommand(
   const projectsRoot = expandPath(config.projectsRoot);
   const reposRoot = join(projectsRoot, config.repositoriesDir);
   const vaultRoot = expandPath(config.vaultPath);
-  const ciArtifactsDir = getCiArtifactsDir(config);
 
   // Parse branch argument to determine type (PR vs branch)
   let parsed;
@@ -129,18 +128,17 @@ export async function createCommand(
   // Fetch CI artifacts if PR is failing
   if (prInfo && shouldFetchArtifacts(metadata, prInfo.checks)) {
     try {
-      const prNumber = branchArg.slice(3); // Remove "pr/" prefix
       const repoUrl = gitInfo.remoteUrl;
       const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
       const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2].replace(/\.git$/, '')}` : project;
       const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : project;
 
-      const artifactsPath = getCIArtifactsPath(ciArtifactsDir, repoName, prNumber);
+      const artifactsPath = getCIArtifactsPath(projectsRoot, project, branchType, parsedName);
 
       mkdirSync(artifactsPath, { recursive: true });
 
       console.log('📦 Fetching CI artifacts for failing PR...');
-      await fetchCIArtifacts(prNumber, ghRepo, artifactsPath, false, repoName);
+      await fetchCIArtifacts(parsedName, ghRepo, artifactsPath, false, repoName);
 
       const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
       Object.assign(metadata, ciMeta);

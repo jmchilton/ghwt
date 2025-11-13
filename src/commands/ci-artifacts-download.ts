@@ -1,10 +1,11 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
+import { loadConfig, expandPath } from '../lib/config.js';
 import { listWorktrees } from '../lib/worktree-list.js';
 import { readNote, updateNoteMetadata } from '../lib/obsidian.js';
 import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
 import { getCIArtifactsPath, fetchAndUpdateCIMetadata } from '../lib/ci-artifacts.js';
+import { parseBranchFromOldFormat } from '../lib/paths.js';
 
 export async function ciDownloadCommand(
   project?: string,
@@ -13,7 +14,7 @@ export async function ciDownloadCommand(
 ): Promise<void> {
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
-  const ciArtifactsDir = getCiArtifactsDir(config);
+  const projectsRoot = expandPath(config.projectsRoot);
 
   const worktrees = listWorktrees(project);
 
@@ -32,12 +33,7 @@ export async function ciDownloadCommand(
     }
   }
 
-  if (options?.verbose) {
-    console.log(`📥 Downloading CI artifacts for ${targetWorktrees.length} worktree(s)...`);
-    console.log(`📂 Artifacts directory: ${ciArtifactsDir}\n`);
-  } else {
-    console.log(`📥 Downloading CI artifacts for ${targetWorktrees.length} worktree(s)...\n`);
-  }
+  console.log(`📥 Downloading CI artifacts for ${targetWorktrees.length} worktree(s)...\n`);
 
   let downloadedCount = 0;
   let skippedCount = 0;
@@ -103,7 +99,8 @@ export async function ciDownloadCommand(
         console.log(`  💡 Using upstream repo (fork detected)`);
       }
 
-      const artifactsPath = getCIArtifactsPath(ciArtifactsDir, repoName, prNumber);
+      const { branchType, name } = parseBranchFromOldFormat(wt.branch);
+      const artifactsPath = getCIArtifactsPath(projectsRoot, wt.project, branchType, name);
 
       if (options?.verbose) {
         console.log(`  🔄 ${wt.displayName}`);

@@ -1,6 +1,6 @@
 import { join } from 'path';
 import { existsSync, readdirSync, statSync, mkdirSync } from 'fs';
-import { loadConfig, expandPath, getCiArtifactsDir } from '../lib/config.js';
+import { loadConfig, expandPath } from '../lib/config.js';
 import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
 import { getPRInfo } from '../lib/github.js';
 import {
@@ -20,7 +20,7 @@ import { listWorktrees } from '../lib/worktree-list.js';
 import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
 import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
 import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
-import { getNotePath, getSessionName } from '../lib/paths.js';
+import { getNotePath, getSessionName, parseBranchFromOldFormat } from '../lib/paths.js';
 import { WorktreeMetadata } from '../types.js';
 
 export async function syncCommand(
@@ -29,7 +29,7 @@ export async function syncCommand(
 ): Promise<void> {
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
-  const ciArtifactsDir = getCiArtifactsDir(config);
+  const projectsRoot = expandPath(config.projectsRoot);
 
   const projectsPath = join(vaultRoot, 'projects');
 
@@ -110,7 +110,8 @@ export async function syncCommand(
               // Smart CI artifact fetching (only for PRs)
               if (frontmatter.pr && shouldFetchArtifacts(frontmatter, prInfo.checks)) {
                 try {
-                  const artifactsPath = getCIArtifactsPath(ciArtifactsDir, repoName, prNumber);
+                  const { branchType, name } = parseBranchFromOldFormat(branch);
+                  const artifactsPath = getCIArtifactsPath(projectsRoot, proj, branchType, name);
 
                   // Create directory if it doesn't exist
                   mkdirSync(artifactsPath, { recursive: true });

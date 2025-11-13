@@ -1,7 +1,8 @@
 import { existsSync } from 'fs';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
-import { loadProjectPaths, getCIArtifactsPath, parseBranchFromOldFormat } from '../lib/paths.js';
+import { loadProjectPaths, parseBranchFromOldFormat } from '../lib/paths.js';
+import { getCIArtifactsPath } from '../lib/ci-artifacts.js';
 
 export async function pathCiArtifactsCommand(
   project?: string,
