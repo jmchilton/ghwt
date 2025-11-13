@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { loadConfig, expandPath } from '../lib/config.js';
-import { listWorktrees } from '../lib/worktree-list.js';
+import { listWorktrees, resolveBranch } from '../lib/worktree-list.js';
 import { readNote, updateNoteMetadata } from '../lib/obsidian.js';
 import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
 import { getCIArtifactsPath, fetchAndUpdateCIMetadata } from '../lib/ci-artifacts.js';
@@ -26,7 +26,9 @@ export async function ciDownloadCommand(
   // Filter by branch if provided
   let targetWorktrees = worktrees;
   if (branch) {
-    targetWorktrees = worktrees.filter((w) => w.branch === branch);
+    // Resolve branch input to full prefixed form (e.g., "structured_tool_state" -> "branch/structured_tool_state")
+    const resolvedBranch = resolveBranch(project || '', branch);
+    targetWorktrees = worktrees.filter((w) => w.branch === resolvedBranch);
     if (targetWorktrees.length === 0) {
       console.log(`❌ No worktrees found for ${project}/${branch}`);
       return;
