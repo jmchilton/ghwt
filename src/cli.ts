@@ -50,6 +50,8 @@ program
     'Create a new worktree and Obsidian note\nBranch format: branch name (e.g., cool-feature) or PR number (e.g., 1234)',
   )
   .option('-v, --verbose', 'Verbose output')
+  .option('--from <base-branch>', 'Base branch to branch from (e.g., origin/dev, main)')
+  .option('--no-fetch', 'Skip fetching remote refs before creating worktree')
   .action(async (project, branch, options) => {
     try {
       await createCommand(project, branch, options);

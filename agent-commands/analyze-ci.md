@@ -49,6 +49,7 @@ The artifacts are organized with the following directory structure (run `ghwt pa
 6. Fall back to `raw/` only if converted versions unavailable
 
 **Pro Tip:** When analyzing an artifact, include the `parsingGuide` from `catalog.json` in your Claude prompt. The parsing guide is specifically written for AI agents and contains:
+
 - How to interpret the artifact structure
 - Key fields to focus on for failure analysis
 - Caveats and edge cases

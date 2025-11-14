@@ -132,3 +132,114 @@ export async function getGitInfo(repoPath: string, branch: string): Promise<GitI
     currentSha,
   };
 }
+
+export async function baseBranchExists(repoPath: string, branch: string): Promise<boolean> {
+  try {
+    // Check local branch
+    await execa('git', ['show-ref', '--quiet', `refs/heads/${branch}`], {
+      cwd: repoPath,
+    });
+    return true;
+  } catch {
+    // Check remote branch
+    try {
+      await execa('git', ['show-ref', '--quiet', `refs/remotes/${branch}`], {
+        cwd: repoPath,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+export async function suggestBaseBranches(
+  repoPath: string,
+  targetBranch: string,
+): Promise<string[]> {
+  try {
+    // Get all branches (local and remote)
+    const { stdout } = await execa('git', ['branch', '-a', '--format=%(refname:short)'], {
+      cwd: repoPath,
+    });
+
+    const allBranches = stdout
+      .split('\n')
+      .map((b) => b.trim())
+      .filter((b) => b.length > 0);
+
+    // Common base branches to prioritize
+    const commonBranches = [
+      'main',
+      'master',
+      'dev',
+      'develop',
+      'origin/main',
+      'origin/master',
+      'origin/dev',
+      'origin/develop',
+      'upstream/main',
+      'upstream/master',
+      'upstream/dev',
+      'upstream/develop',
+    ];
+
+    // Filter common branches that exist
+    const existingCommon = commonBranches.filter((b) => allBranches.includes(b));
+
+    // If target looks like a remote branch, suggest similar remotes
+    const targetLower = targetBranch.toLowerCase();
+    const fuzzyMatches = allBranches.filter((b) => {
+      const bLower = b.toLowerCase();
+      return bLower.includes(targetLower) || targetLower.includes(bLower);
+    });
+
+    // Combine: prioritize common, then fuzzy matches, then limit to 5
+    const suggestions = [...new Set([...existingCommon, ...fuzzyMatches])].slice(0, 5);
+
+    return suggestions;
+  } catch {
+    return [];
+  }
+}
+
+export async function getImplicitBaseBranch(
+  repoPath: string,
+  targetBranch: string,
+): Promise<string | null> {
+  // Import getCurrentUser here to avoid circular dependency
+  const { getCurrentUser } = await import('./github.js');
+
+  // 1. Check if target branch exists locally in source repo
+  try {
+    const localExists = await branchExists(repoPath, targetBranch);
+    if (localExists) {
+      return targetBranch;
+    }
+  } catch {
+    // Continue to next check
+  }
+
+  // 2. Check if origin/target-branch exists
+  try {
+    const originExists = await baseBranchExists(repoPath, `origin/${targetBranch}`);
+    if (originExists) {
+      return `origin/${targetBranch}`;
+    }
+  } catch {
+    // Continue to next check
+  }
+
+  // 3. Check if user has a remote with their name and the target branch exists there
+  try {
+    const user = await getCurrentUser();
+    const userRemoteExists = await baseBranchExists(repoPath, `${user}/${targetBranch}`);
+    if (userRemoteExists) {
+      return `${user}/${targetBranch}`;
+    }
+  } catch {
+    // User not available or remote doesn't exist, return null
+  }
+
+  return null;
+}

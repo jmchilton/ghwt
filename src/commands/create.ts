@@ -2,7 +2,13 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { execa } from 'execa';
 import { loadConfig, expandPath } from '../lib/config.js';
-import { getGitInfo, branchExists } from '../lib/git.js';
+import {
+  getGitInfo,
+  branchExists,
+  baseBranchExists,
+  suggestBaseBranches,
+  getImplicitBaseBranch,
+} from '../lib/git.js';
 import { getPRInfo, getPRRepoUrl } from '../lib/github.js';
 import { createWorktreeNote, getObsidianNoteUrl } from '../lib/obsidian.js';
 import {
@@ -20,7 +26,7 @@ import { WorktreeMetadata } from '../types.js';
 export async function createCommand(
   project: string,
   branchArg: string,
-  options?: { verbose?: boolean },
+  options?: { verbose?: boolean; from?: string; noFetch?: boolean },
 ): Promise<void> {
   const config = loadConfig();
   const projectsRoot = expandPath(config.projectsRoot);
@@ -46,6 +52,41 @@ export async function createCommand(
   assertRepoExists(repoPath);
 
   console.log(`🔹 Repository: ${repoPath}`);
+
+  // Fetch remote refs unless --no-fetch is provided
+  if (!options?.noFetch) {
+    console.log('🔄 Fetching remote refs...');
+    try {
+      await execa('git', ['fetch', '--all'], { cwd: repoPath });
+    } catch (error) {
+      console.log(`⚠️  Warning: Failed to fetch remote refs: ${error}`);
+    }
+  }
+
+  // Determine base branch - either explicit or implicit
+  let baseBranch: string | null = null;
+
+  if (options?.from) {
+    // Explicit base branch provided
+    const baseExists = await baseBranchExists(repoPath, options.from);
+    if (!baseExists) {
+      const suggestions = await suggestBaseBranches(repoPath, options.from);
+      console.error(`❌ Base branch '${options.from}' not found.`);
+      if (suggestions.length > 0) {
+        console.error(
+          `\nDid you mean one of these?\n${suggestions.map((s) => `  - ${s}`).join('\n')}`,
+        );
+      }
+      process.exit(1);
+    }
+    baseBranch = options.from;
+  } else if (branchType === 'branch') {
+    // Try to detect implicit base branch for branch type only (not PRs)
+    baseBranch = await getImplicitBaseBranch(repoPath, parsedName);
+    if (baseBranch && baseBranch !== parsedName) {
+      console.log(`📍 Branching from: ${baseBranch} (detected)`);
+    }
+  }
 
   // Determine actual git branch
   let branch = '';
@@ -79,11 +120,18 @@ export async function createCommand(
 
     const branchExists_ = await branchExists(repoPath, branch);
     if (branchExists_) {
+      if (baseBranch && baseBranch !== branch) {
+        console.log(`⚠️  Branch '${branch}' already exists, ignoring base branch option`);
+      }
       await execa('git', ['worktree', 'add', worktreePath, branch], {
         cwd: repoPath,
       });
     } else {
-      await execa('git', ['worktree', 'add', '-b', branch, worktreePath], {
+      const args = ['worktree', 'add', '-b', branch, worktreePath];
+      if (baseBranch && baseBranch !== branch) {
+        args.push(baseBranch);
+      }
+      await execa('git', args, {
         cwd: repoPath,
       });
     }
