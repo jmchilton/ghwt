@@ -12,22 +12,25 @@
     "bin",
     "agent-commands",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "setup": "npm run build && npm link",
+    "setup": "npm run build && npm run permission && npm link",
+    "permission": "chmod u+x bin/*",
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "smoke-test": "bash scripts/smoke-test.sh",
     "lint": "eslint . && tsc --noEmit",
     "lint:fix": "eslint . --fix && prettier --write .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublishOnly": "npm run lint && npm run build"
+    "prepublishOnly": "npm run lint && npm run test && npm run build"
   },
   "keywords": [
     "worktree",
@@ -61,13 +64,18 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.6",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.10.6",
     "@types/prompt-sync": "^4.2.3",
+    "@vitest/coverage-v8": "^4.0.6",
     "@vitest/ui": "^3.2.4",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
+    "semantic-release": "^24.2.9",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.46.2",
     "vitest": "^3.2.4"
