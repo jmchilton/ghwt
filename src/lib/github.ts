@@ -57,6 +57,7 @@ export interface PRInfo {
   updatedAt: string;
   url: string;
   headRefName: string;
+  baseRefName: string;
 }
 
 export async function getPRInfo(prNumber: number | string, repo?: string): Promise<PRInfo> {
@@ -68,7 +69,7 @@ export async function getPRInfo(prNumber: number | string, repo?: string): Promi
       'view',
       prNum,
       '--json',
-      'number,state,statusCheckRollup,reviews,labels,updatedAt,url,headRefName',
+      'number,state,statusCheckRollup,reviews,labels,updatedAt,url,headRefName,baseRefName',
     ];
 
     if (repo) {
@@ -101,6 +102,7 @@ export async function getPRInfo(prNumber: number | string, repo?: string): Promi
       updatedAt: prData.updatedAt,
       url: prData.url,
       headRefName: prData.headRefName,
+      baseRefName: prData.baseRefName,
     };
   } catch (error) {
     throw new Error(`Failed to fetch PR info for #${prNum}: ${error}`);

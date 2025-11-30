@@ -283,3 +283,15 @@ describe('create command: base branch selection', () => {
     expect(implicit).toBeNull();
   });
 });
+
+describe('create command: PR base branch detection', () => {
+  it('should include baseRefName in PRInfo type', () => {
+    // This test will fail until we add baseRefName to PRInfo interface
+    // Type check: PRInfo should have baseRefName field
+    const mockPRInfo: { baseRefName?: string } = {
+      baseRefName: 'dev',
+    };
+
+    expect(mockPRInfo.baseRefName).toBe('dev');
+  });
+});

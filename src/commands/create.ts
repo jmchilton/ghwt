@@ -91,7 +91,8 @@ export async function createCommand(
   // Determine actual git branch
   let branch = '';
   let prUrl = '';
-  let prInfo: { headRefName: string; url: string; checks?: string } | null = null;
+  let prInfo: { headRefName: string; url: string; checks?: string; baseRefName?: string } | null =
+    null;
 
   if (branchType === 'pr') {
     // PR number is in parsedName
@@ -102,6 +103,13 @@ export async function createCommand(
       prInfo = await getPRInfo(parsedName, ghRepo);
       branch = prInfo.headRefName;
       prUrl = prInfo.url;
+
+      // Set base branch from PR if not explicitly provided
+      if (!options?.from && prInfo.baseRefName) {
+        baseBranch = prInfo.baseRefName;
+        console.log(`📍 PR targets: ${baseBranch} (from PR metadata)`);
+      }
+
       console.log(`🔗 PR: ${prUrl}`);
     } catch (error) {
       console.error(`❌ Failed to fetch PR info: ${error}`);
@@ -110,6 +118,21 @@ export async function createCommand(
   } else {
     // branchType === 'branch'
     branch = parsedName;
+  }
+
+  // Validate base branch exists if set from PR, fallback to origin/base if needed
+  if (baseBranch && branchType === 'pr' && !options?.from) {
+    const baseExists = await baseBranchExists(repoPath, baseBranch);
+    if (!baseExists) {
+      const originBaseExists = await baseBranchExists(repoPath, `origin/${baseBranch}`);
+      if (originBaseExists) {
+        baseBranch = `origin/${baseBranch}`;
+        console.log(`📍 Using remote: ${baseBranch}`);
+      } else {
+        console.log(`⚠️  Warning: PR base branch '${baseBranch}' not found locally or on origin`);
+        baseBranch = null;
+      }
+    }
   }
 
   // Create worktree
