@@ -104,6 +104,19 @@ export async function createCommand(
       branch = prInfo.headRefName;
       prUrl = prInfo.url;
 
+      // Fetch the PR's actual commits from GitHub
+      console.log(`📥 Fetching PR #${parsedName} commits...`);
+      try {
+        // Determine which remote to use (upstream or origin)
+        const remote = ghRepo?.includes('/') ? (await execa('git', ['remote', 'get-url', 'upstream'], { cwd: repoPath }).catch(() => null) ? 'upstream' : 'origin') : 'origin';
+        await execa('git', ['fetch', remote, `pull/${parsedName}/head:${branch}`], {
+          cwd: repoPath,
+        });
+        console.log(`✅ Fetched PR branch: ${branch}`);
+      } catch {
+        console.log(`⚠️  Warning: Could not fetch PR branch directly, will try to create from base`);
+      }
+
       // Set base branch from PR if not explicitly provided
       if (!options?.from && prInfo.baseRefName) {
         baseBranch = prInfo.baseRefName;

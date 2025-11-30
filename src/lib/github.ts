@@ -76,9 +76,7 @@ export async function getPRInfo(prNumber: number | string, repo?: string): Promi
       args.push('--repo', repo);
     }
 
-    const { stdout: prJson } = await execa('gh', args, {
-      cwd: repo ? undefined : process.cwd(),
-    });
+    const { stdout: prJson } = await execa('gh', args);
 
     const prData = JSON.parse(prJson);
 
