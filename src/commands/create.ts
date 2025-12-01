@@ -154,6 +154,15 @@ export async function createCommand(
   } else {
     console.log(`🌱 Creating worktree for branch '${branch}'...`);
 
+    // Check if branch is currently checked out in main repo
+    const { stdout: currentBranch } = await execa('git', ['branch', '--show-current'], {
+      cwd: repoPath,
+    });
+    if (currentBranch.trim() === branch) {
+      console.log(`📌 Detaching HEAD in main repository (branch '${branch}' currently checked out)`);
+      await execa('git', ['checkout', '--detach'], { cwd: repoPath });
+    }
+
     const branchExists_ = await branchExists(repoPath, branch);
     if (branchExists_) {
       if (baseBranch && baseBranch !== branch) {
