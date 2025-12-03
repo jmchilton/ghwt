@@ -1,14 +1,62 @@
 import { readdirSync } from 'fs';
 import { execa } from 'execa';
-import { loadProjectPaths } from '../lib/paths.js';
+import { loadProjectPaths, parseBranchFromOldFormat } from '../lib/paths.js';
 import { shortenSessionName } from '../lib/terminal-session-base.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
+import { getCurrentWorktreeContext } from '../lib/worktree-list.js';
 
-interface CleanSessionsOptions {
+interface CleanSessionOptions {
   force?: boolean;
   verbose?: boolean;
+  this?: boolean;
+  all?: boolean;
 }
 
-export async function cleanSessionsCommand(options?: CleanSessionsOptions): Promise<void> {
+/**
+ * Clean specific terminal session for a project/branch
+ */
+async function cleanSpecificSession(project: string, branch: string): Promise<void> {
+  // Parse branch to get name without prefix (branch/ or pr/)
+  const { name } = parseBranchFromOldFormat(branch);
+  const sessionName = `${project}-${name}`;
+  const shortened = shortenSessionName(sessionName);
+
+  let killed = false;
+
+  // Try killing tmux session
+  try {
+    await execa('tmux', ['kill-session', '-t', sessionName]);
+    console.log(`✅ Killed tmux session: ${sessionName}`);
+    killed = true;
+  } catch {
+    // Session doesn't exist in tmux, try zellij
+  }
+
+  // Try killing zellij session (try both full and shortened)
+  try {
+    await execa('zellij', ['delete-session', '-f', shortened]);
+    console.log(`✅ Killed zellij session: ${shortened}`);
+    killed = true;
+  } catch {
+    // Try full name
+    try {
+      await execa('zellij', ['delete-session', '-f', sessionName]);
+      console.log(`✅ Killed zellij session: ${sessionName}`);
+      killed = true;
+    } catch {
+      // Session doesn't exist in zellij either
+    }
+  }
+
+  if (!killed) {
+    console.log(`⚠️  No active session found for: ${sessionName}`);
+  }
+}
+
+/**
+ * Clean all ghwt terminal sessions
+ */
+async function cleanAllSessions(options?: CleanSessionOptions): Promise<void> {
   const { worktreesRoot } = loadProjectPaths();
 
   // Get all worktree directories to determine possible session names
@@ -130,4 +178,47 @@ export async function cleanSessionsCommand(options?: CleanSessionsOptions): Prom
 
   // Summary
   console.log(`\n✅ Killed ${killed.tmux} tmux session(s), ${killed.zellij} zellij session(s)`);
+}
+
+/**
+ * Main command: Kill ghwt terminal session(s)
+ */
+export async function cleanSessionCommand(
+  project?: string,
+  branch?: string,
+  options?: CleanSessionOptions,
+): Promise<void> {
+  let selectedProject = project;
+  let selectedBranch = branch;
+
+  // Handle --all flag first
+  if (options?.all) {
+    await cleanAllSessions(options);
+    return;
+  }
+
+  // If --this flag is set, use current worktree context
+  if (options?.this) {
+    try {
+      const context = await getCurrentWorktreeContext();
+      selectedProject = context.project;
+      selectedBranch = context.branch;
+    } catch (error) {
+      console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  } else if (!selectedProject || !selectedBranch) {
+    // If either is missing, show picker
+    const picked = await pickWorktree(project);
+    selectedProject = picked.project;
+    selectedBranch = picked.branch;
+  }
+
+  // Clean specific session
+  if (selectedProject && selectedBranch) {
+    await cleanSpecificSession(selectedProject, selectedBranch);
+  } else {
+    console.error('❌ No session specified. Use --all to clean all sessions.');
+    process.exit(1);
+  }
 }

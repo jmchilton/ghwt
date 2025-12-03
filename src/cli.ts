@@ -15,7 +15,7 @@ import { claudeCommand } from './commands/claude.js';
 import { cursorCommand } from './commands/cursor.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { lintCommand } from './commands/lint.js';
-import { cleanSessionsCommand } from './commands/clean-sessions.js';
+import { cleanSessionCommand } from './commands/clean-session.js';
 import { ciCleanCommand } from './commands/ci-artifacts-clean.js';
 import { ciDownloadCommand } from './commands/ci-artifacts-download.js';
 import { pathCiArtifactsCommand } from './commands/path-ci-artifacts.js';
@@ -275,13 +275,31 @@ program
   });
 
 program
+  .command('clean-session [project] [branch]')
+  .description('Kill a ghwt terminal session (or all with --all)')
+  .option('--this', 'Clean session for current worktree')
+  .option('--all', 'Clean all ghwt sessions')
+  .option('--force', 'Skip confirmation prompt (only with --all)')
+  .option('--verbose', 'Show which sessions are being killed')
+  .action(async (project, branch, options) => {
+    try {
+      await cleanSessionCommand(project, branch, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+// Backward compatibility alias
+program
   .command('clean-sessions')
-  .description('Kill all active ghwt terminal sessions')
+  .description('(Deprecated) Use "clean-session --all" instead')
   .option('--force', 'Skip confirmation prompt')
   .option('--verbose', 'Show which sessions are being killed')
   .action(async (options) => {
+    console.warn('⚠️  clean-sessions is deprecated. Use "clean-session --all" instead.');
     try {
-      await cleanSessionsCommand(options);
+      await cleanSessionCommand(undefined, undefined, { ...options, all: true });
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

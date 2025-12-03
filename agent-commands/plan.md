@@ -4,8 +4,11 @@ Create or refine a plan for work in the current worktree.
 
 ## What This Does
 
-1. Reads the worktree note from the current directory
+1. Reads the worktree note using ghwt - this can be done by invoking the   
+   command `ghwt path-note --this` from this current work tree.
 2. Looks for existing TODO or PLAN sections
+3. The note is for user input and user planning, any plans you create should
+   be placed and tracked in the current worktree.
 3. Enters planning mode to structure work and break it down into tasks
 
 ## How It Works
@@ -17,48 +20,17 @@ This command will:
 - Ask clarifying questions about the work
 - Help you break down the feature/task into actionable steps
 - Generate a structured plan with clear tasks
-- Update your note with the plan
+- Write the plan to a worktree file with an all caps name like PLAN_FEATURE_A.md.
 
 ## Note Structure
 
-Your plan goes in the main body of the note (not in frontmatter). The command extracts your plan and stops at the "Quick Actions" section (everything after is ignored).
+The user TODOs go in the main body of the note (not in frontmatter). The command extracts TODOS and stops at the "Quick Actions" section (everything after is ignored).
 
 The command ignores:
 
 - **Frontmatter** - YAML at the top between `---` markers
 - **Quick Actions section** - Anything at or after `## Quick Actions`
 - **Obsidian quicklinks** - Links to related notes like `[[other-note]]`
-
-A good plan structure looks like:
-
-```markdown
----
-project: galaxy
-branch: branch/my-feature
-status: in-progress
----
-
-# Feature: Add User Authentication
-
-## Plan
-
-- [ ] Design authentication schema
-- [ ] Implement login endpoint
-- [ ] Add JWT token validation
-- [ ] Write integration tests
-- [ ] Update API docs
-
-## Implementation Notes
-
-Schema design considerations:
-
-- Store hashed passwords using bcrypt
-- Add rate limiting on login attempts
-- Consider JWT expiration strategy
-
-[[security-guidelines]]
-[[user-management-module]]
-```
 
 ## Usage
 
@@ -69,7 +41,7 @@ When you run `/ghwt:plan` from within a worktree:
 3. Asks about the work: scope, requirements, constraints
 4. Helps break down work into manageable tasks
 5. Generates a clear TODO list
-6. Offers to update your note with the plan
+6. Writes the plan to the current worktree.
 
 ## When to Use This
 
