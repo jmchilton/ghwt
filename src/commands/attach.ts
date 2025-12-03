@@ -40,7 +40,8 @@ export async function attachCmd(
   assertWorktreeExists(worktreePath);
 
   try {
-    await attachCommand(selectedProject, selectedBranch, worktreePath, config, options);
+    // Pass 'name' (without branch/ or pr/ prefix) for consistent session naming
+    await attachCommand(selectedProject, name, worktreePath, config, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Failed to attach: ${message}`);
