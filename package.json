@@ -1,5 +1,5 @@
 {
-  "name": "@jmchilton/ghwt",
+  "name": "ghwt",
   "version": "0.1.0",
   "description": "Worktree-centered development task dashboard with Obsidian integration",
   "type": "module",

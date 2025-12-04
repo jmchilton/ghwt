@@ -168,7 +168,16 @@ export async function attachCommand(
     // Check if session exists
     const exists = await manager.sessionExists(sessionName);
     if (!exists) {
-      throw new Error(`Session not found: ${sessionName}`);
+      // Session doesn't exist, recreate it
+      console.log(`⚙️  Session not found, creating new session: ${sessionName}`);
+      const configPath = findSessionConfig(project, config);
+      if (!configPath) {
+        throw new Error(`No session config found for project: ${project}`);
+      }
+
+      const sessionConfig = loadSessionConfig(configPath);
+      await manager.createSession(sessionName, sessionConfig, worktreePath, project, branch);
+      console.log(`✅ Created session: ${sessionName}`);
     }
 
     // Validate UI is available

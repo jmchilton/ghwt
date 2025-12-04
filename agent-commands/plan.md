@@ -4,12 +4,12 @@ Create or refine a plan for work in the current worktree.
 
 ## What This Does
 
-1. Reads the worktree note using ghwt - this can be done by invoking the   
+1. Reads the worktree note using ghwt - this can be done by invoking the  
    command `ghwt path-note --this` from this current work tree.
 2. Looks for existing TODO or PLAN sections
 3. The note is for user input and user planning, any plans you create should
    be placed and tracked in the current worktree.
-3. Enters planning mode to structure work and break it down into tasks
+4. Enters planning mode to structure work and break it down into tasks
 
 ## How It Works
 

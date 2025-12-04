@@ -108,13 +108,21 @@ export async function createCommand(
       console.log(`📥 Fetching PR #${parsedName} commits...`);
       try {
         // Determine which remote to use (upstream or origin)
-        const remote = ghRepo?.includes('/') ? (await execa('git', ['remote', 'get-url', 'upstream'], { cwd: repoPath }).catch(() => null) ? 'upstream' : 'origin') : 'origin';
+        const remote = ghRepo?.includes('/')
+          ? (await execa('git', ['remote', 'get-url', 'upstream'], { cwd: repoPath }).catch(
+              () => null,
+            ))
+            ? 'upstream'
+            : 'origin'
+          : 'origin';
         await execa('git', ['fetch', remote, `pull/${parsedName}/head:${branch}`], {
           cwd: repoPath,
         });
         console.log(`✅ Fetched PR branch: ${branch}`);
       } catch {
-        console.log(`⚠️  Warning: Could not fetch PR branch directly, will try to create from base`);
+        console.log(
+          `⚠️  Warning: Could not fetch PR branch directly, will try to create from base`,
+        );
       }
 
       // Set base branch from PR if not explicitly provided
@@ -159,7 +167,9 @@ export async function createCommand(
       cwd: repoPath,
     });
     if (currentBranch.trim() === branch) {
-      console.log(`📌 Detaching HEAD in main repository (branch '${branch}' currently checked out)`);
+      console.log(
+        `📌 Detaching HEAD in main repository (branch '${branch}' currently checked out)`,
+      );
       await execa('git', ['checkout', '--detach'], { cwd: repoPath });
     }
 
