@@ -1,4 +1,4 @@
-# @jmchilton/ghwt
+# ghwt
 
 Worktree-centered development task dashboard with Obsidian integration.
 
@@ -18,7 +18,7 @@ Worktree-centered development task dashboard with Obsidian integration.
 ## Installation
 
 ```bash
-npm install -g @jmchilton/ghwt
+npm install -g ghwt
 # or link locally for development
 npm link
 ```
@@ -96,9 +96,13 @@ Automatically:
 ### Sync metadata
 
 ```bash
-ghwt sync                    # Sync all projects
-ghwt sync galaxy             # Sync specific project
-ghwt sync --verbose          # See detailed output
+ghwt sync                         # → Interactive picker
+ghwt sync galaxy cool-feature     # Sync specific worktree
+ghwt sync --this                  # Sync current worktree
+ghwt sync --all                   # Sync all worktrees
+ghwt sync-all                     # Shortcut for sync --all
+ghwt sync galaxy --all            # Sync all worktrees for project
+ghwt sync --all --verbose         # See detailed output
 ```
 
 Updates:
@@ -144,6 +148,13 @@ ghwt create galaxy new-feature
 
 ghwt attach galaxy new-feature
 # → Reconnect to existing session (survives terminal crashes)
+
+# Clean sessions
+ghwt clean-session                    # → Interactive picker
+ghwt clean-session galaxy new-feature # Kill specific session
+ghwt clean-session --this             # Kill current worktree's session
+ghwt clean-session --all              # Kill all ghwt sessions
+ghwt clean-session-all                # Shortcut for clean-session --all
 ```
 
 **Features:**
@@ -155,6 +166,7 @@ ghwt attach galaxy new-feature
 - UI options: WezTerm wrapper, direct zellij, or raw multiplexer
 - Works locally and remotely (SSH, containers)
 - Gracefully degrades if no config (sessions optional)
+- Auto-recreate: `attach` recreates missing session if config exists
 
 ### Claude Sessions
 
@@ -463,7 +475,7 @@ src/
 │   ├── ci-artifacts-clean.ts     # Clean CI artifacts
 │   ├── path-ci-artifacts.ts      # Output CI artifacts path
 │   ├── path-note.ts              # Output note path
-│   ├── clean-sessions.ts         # Kill all sessions
+│   ├── clean-session.ts          # Kill terminal sessions
 │   ├── lint.ts                   # Validate configs
 │   └── dashboard.ts       # Open Obsidian dashboard
 └── lib/
