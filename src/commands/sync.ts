@@ -50,7 +50,7 @@ async function syncSingleWorktree(
   console.log(`🔄 Syncing ${project}/${branch}...`);
 
   // Get worktree path
-  const worktreesRoot = expandPath(config.worktreesRoot);
+  const worktreesRoot = join(projectsRoot, config.worktreesDir);
   const worktreePath = join(worktreesRoot, project, branchType, name);
 
   if (!existsSync(worktreePath)) {
