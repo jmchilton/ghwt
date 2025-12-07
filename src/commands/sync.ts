@@ -16,16 +16,192 @@ import {
   getCIMetadata,
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
-import { listWorktrees } from '../lib/worktree-list.js';
+import { listWorktrees, getCurrentWorktreeContext } from '../lib/worktree-list.js';
 import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
 import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
 import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
 import { getNotePath, getSessionName, parseBranchFromOldFormat } from '../lib/paths.js';
 import { WorktreeMetadata } from '../types.js';
+import { pickWorktree } from '../lib/worktree-picker.js';
+
+interface SyncOptions {
+  verbose?: boolean;
+  this?: boolean;
+  all?: boolean;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Config = any;
+
+/**
+ * Sync a single worktree's metadata
+ */
+async function syncSingleWorktree(
+  project: string,
+  branch: string,
+  config: Config,
+  vaultRoot: string,
+  projectsRoot: string,
+  options?: SyncOptions,
+): Promise<void> {
+  const { name, branchType } = parseBranchFromOldFormat(branch);
+  const notePath = getNotePath(vaultRoot, project, branch);
+
+  console.log(`🔄 Syncing ${project}/${branch}...`);
+
+  // Get worktree path
+  const worktreesRoot = expandPath(config.worktreesRoot);
+  const worktreePath = join(worktreesRoot, project, branchType, name);
+
+  if (!existsSync(worktreePath)) {
+    console.error(`❌ Worktree not found: ${worktreePath}`);
+    process.exit(1);
+  }
+
+  // If note doesn't exist, create it
+  if (!existsSync(notePath)) {
+    try {
+      const gitInfo = await getGitInfo(worktreePath, branch);
+      const daysSinceActivity = calculateDaysSinceActivity(worktreePath);
+
+      const metadata: Partial<WorktreeMetadata> = {
+        project,
+        branch,
+        status: 'in-progress',
+        created: new Date().toISOString().split('T')[0],
+        repo_url: gitInfo.remoteUrl,
+        worktree_path: worktreePath,
+        base_branch: gitInfo.baseBranch,
+        commits_ahead: gitInfo.commitsAhead,
+        commits_behind: gitInfo.commitsBehind,
+        has_uncommitted_changes: gitInfo.hasUncommittedChanges,
+        last_commit_date: gitInfo.lastCommitDate,
+        tracking_branch: gitInfo.trackingBranch || undefined,
+        days_since_activity: daysSinceActivity,
+      };
+
+      createWorktreeNote(notePath, metadata);
+      console.log(`📝 Created note: ${project}/${branch}`);
+    } catch (error) {
+      console.error(`❌ Failed to create note: ${error}`);
+      process.exit(1);
+    }
+  }
+
+  // Read current note and sync
+  const { frontmatter } = readNote(notePath);
+  const gitInfo = await getGitInfo(worktreePath, branch);
+  const daysSinceActivity = calculateDaysSinceActivity(worktreePath);
+
+  const updates: Partial<WorktreeMetadata> = {
+    commits_ahead: gitInfo.commitsAhead,
+    commits_behind: gitInfo.commitsBehind,
+    has_uncommitted_changes: gitInfo.hasUncommittedChanges,
+    last_commit_date: gitInfo.lastCommitDate,
+    tracking_branch: gitInfo.trackingBranch || undefined,
+    days_since_activity: daysSinceActivity,
+  };
+
+  // If PR, fetch PR info
+  if (frontmatter.pr) {
+    try {
+      const prMatch = (frontmatter.pr as string).match(/\/(\d+)$/);
+      if (prMatch) {
+        const prNumber = prMatch[1];
+        const upstreamUrl = await getUpstreamUrl(worktreePath);
+        const repoUrl = upstreamUrl || gitInfo.remoteUrl;
+        const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
+        const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
+        const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : project;
+
+        const prInfo = await getPRInfo(prNumber, ghRepo);
+        updates.pr_state = prInfo.state;
+        updates.pr_checks = prInfo.checks;
+        updates.pr_reviews = prInfo.reviews;
+        updates.pr_labels = prInfo.labels;
+        updates.pr_updated_at = prInfo.updatedAt;
+
+        // Smart CI artifact fetching
+        if (shouldFetchArtifacts(frontmatter, prInfo.checks)) {
+          try {
+            const artifactsPath = getCIArtifactsPath(projectsRoot, project, branchType, name);
+            mkdirSync(artifactsPath, { recursive: true });
+
+            const resume = !needsFullFetch(frontmatter, gitInfo.currentSha);
+            if (options?.verbose) {
+              console.log(`  📦 Fetching CI artifacts (${resume ? 'resume' : 'full'})...`);
+            }
+
+            await fetchCIArtifacts(
+              prNumber,
+              ghRepo || repoName,
+              artifactsPath,
+              resume,
+              repoName,
+              options,
+            );
+
+            const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
+            Object.assign(updates, ciMeta);
+
+            if (options?.verbose) {
+              console.log(
+                `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
+              );
+            }
+          } catch (error) {
+            if (options?.verbose) {
+              console.log(`  ⚠️  Failed to fetch CI artifacts: ${error}`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if (options?.verbose) {
+        console.log(`  ⚠️  Failed to fetch PR info: ${error}`);
+      }
+    }
+  }
+
+  updateNoteMetadata(notePath, updates);
+
+  // Check/recreate session
+  const sessionName = getSessionName(project, branch);
+  const manager =
+    config.terminalMultiplexer === 'zellij' ? new ZellijSessionManager() : new TmuxSessionManager();
+
+  const sessionExists = await manager.sessionExists(sessionName);
+  if (!sessionExists) {
+    const configPath = findSessionConfig(project, config);
+    if (configPath) {
+      try {
+        const sessionConfig = loadSessionConfig(configPath);
+        await manager.createSession(
+          sessionName,
+          sessionConfig,
+          worktreePath,
+          project,
+          branch,
+          notePath,
+        );
+        console.log(`🖥️  Recreated session: ${sessionName}`);
+      } catch (error) {
+        if (options?.verbose) {
+          console.log(`  ⚠️  Failed to recreate session: ${error}`);
+        }
+      }
+    }
+  }
+
+  console.log(
+    `✅ Synced: ${project}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`,
+  );
+}
 
 export async function syncCommand(
   project?: string,
-  options?: { verbose?: boolean },
+  branch?: string,
+  options?: SyncOptions,
 ): Promise<void> {
   const config = loadConfig();
   const vaultRoot = expandPath(config.vaultPath);
@@ -33,14 +209,48 @@ export async function syncCommand(
 
   const projectsPath = join(vaultRoot, 'projects');
 
+  let selectedProject = project;
+  let selectedBranch = branch;
+
+  // Handle --this flag
+  if (options?.this) {
+    try {
+      const context = await getCurrentWorktreeContext();
+      selectedProject = context.project;
+      selectedBranch = context.branch;
+    } catch (error) {
+      console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  } else if (!options?.all && !selectedProject && !selectedBranch) {
+    // No args provided and not --all: show picker
+    const picked = await pickWorktree();
+    selectedProject = picked.project;
+    selectedBranch = picked.branch;
+  }
+
+  // If specific worktree selected (via args, --this, or picker), sync just that one
+  if (selectedProject && selectedBranch) {
+    await syncSingleWorktree(
+      selectedProject,
+      selectedBranch,
+      config,
+      vaultRoot,
+      projectsRoot,
+      options,
+    );
+    return;
+  }
+
+  // Otherwise sync all (or all for a project)
   console.log('🔄 Syncing worktree metadata...\n');
 
   let syncedCount = 0;
   let errorCount = 0;
 
   // Scan projects
-  const projectDirs = project
-    ? [project]
+  const projectDirs = selectedProject
+    ? [selectedProject]
     : readdirSync(projectsPath).filter((p) => statSync(join(projectsPath, p)).isDirectory());
 
   for (const proj of projectDirs) {
@@ -175,7 +385,7 @@ export async function syncCommand(
   // Check for missing notes and sessions (deleted but worktree still exists)
   let recreatedCount = 0;
   let sessionRecreatedCount = 0;
-  const allWorktrees = listWorktrees(project);
+  const allWorktrees = listWorktrees(selectedProject);
 
   for (const wt of allWorktrees) {
     const notePath = getNotePath(vaultRoot, wt.project, wt.branch);

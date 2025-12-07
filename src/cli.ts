@@ -62,12 +62,28 @@ program
   });
 
 program
-  .command('sync [project]')
-  .description('Sync worktree metadata from git and GitHub')
+  .command('sync [project] [branch]')
+  .description('Sync worktree metadata from git and GitHub (or all with --all)')
   .option('-v, --verbose', 'Verbose output')
-  .action(async (project, options) => {
+  .option('--this', 'Sync current worktree (requires running from within worktree)')
+  .option('--all', 'Sync all worktrees')
+  .action(async (project, branch, options) => {
     try {
-      await syncCommand(project, options);
+      await syncCommand(project, branch, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+// Shortcut alias for sync --all
+program
+  .command('sync-all')
+  .description('Sync all worktrees (shortcut for "sync --all")')
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (options) => {
+    try {
+      await syncCommand(undefined, undefined, { ...options, all: true });
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -284,6 +300,21 @@ program
   .action(async (project, branch, options) => {
     try {
       await cleanSessionCommand(project, branch, options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+// Shortcut alias for clean-session --all
+program
+  .command('clean-session-all')
+  .description('Clean all ghwt sessions (shortcut for "clean-session --all")')
+  .option('--force', 'Skip confirmation prompt')
+  .option('--verbose', 'Show which sessions are being killed')
+  .action(async (options) => {
+    try {
+      await cleanSessionCommand(undefined, undefined, { ...options, all: true });
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
