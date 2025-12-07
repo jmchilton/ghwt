@@ -52,10 +52,11 @@ export function getCIArtifactsPath(
 
 export function shouldFetchArtifacts(
   worktree: Partial<WorktreeMetadata>,
-  prChecks: string | undefined,
+  prChecks?: string,
+  ciChecks?: string,
 ): boolean {
-  // Fetch if PR is failing OR no CI data exists yet OR artifact path doesn't exist
-  const isFailing = prChecks === 'failing';
+  // Fetch if CI is failing (from either PR checks or GitHub Actions) OR no CI data exists yet OR artifact path doesn't exist
+  const isFailing = prChecks === 'failing' || ciChecks === 'failing';
   const noCIData = !worktree.ci_last_synced;
   const artifactsMissing =
     worktree.ci_artifacts_path && !existsSync(worktree.ci_artifacts_path as string);

@@ -139,6 +139,10 @@ export const NoteFrontmatterSchema = z
     pr_reviews: z.number().int().optional().describe('Number of PR reviews'),
     pr_labels: z.array(z.string()).optional().describe('PR labels'),
     pr_updated_at: z.string().optional().describe('PR last updated timestamp'),
+    ci_checks: z
+      .enum(['passing', 'failing', 'pending', 'none'])
+      .optional()
+      .describe('GitHub Actions CI status'),
     ci_status: z
       .enum(['complete', 'partial', 'incomplete'])
       .optional()

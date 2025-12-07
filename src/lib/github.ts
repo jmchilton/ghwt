@@ -48,6 +48,59 @@ export async function getPRRepoUrl(repoPath: string): Promise<string | undefined
   }
 }
 
+/**
+ * Get the appropriate repo for CI operations.
+ * CI runs on your fork, so we need to find the remote pointing to your fork.
+ * Checks remotes in order: origin, then any remote matching current user's GitHub username.
+ */
+export async function getCIRepoUrl(repoPath: string): Promise<string | undefined> {
+  try {
+    // First, get the current GitHub user
+    let currentUser: string | undefined;
+    try {
+      currentUser = await getCurrentUser();
+    } catch {
+      // If we can't get user, fall back to origin
+    }
+
+    // Get all remotes
+    const { stdout: remotesOutput } = await execa('git', ['remote', '-v'], {
+      cwd: repoPath,
+    });
+
+    const remotes = new Map<string, string>();
+    for (const line of remotesOutput.split('\n')) {
+      const match = line.match(/^(\S+)\s+(\S+)\s+\(fetch\)$/);
+      if (match) {
+        remotes.set(match[1], match[2]);
+      }
+    }
+
+    // If we have a current user, look for a remote matching their fork
+    if (currentUser) {
+      for (const [, url] of remotes) {
+        const parsed = parseGitRepoUrl(url);
+        if (parsed && parsed.owner.toLowerCase() === currentUser.toLowerCase()) {
+          return `${parsed.owner}/${parsed.repo}`;
+        }
+      }
+    }
+
+    // Fall back to origin (if it's not upstream/main repo)
+    const originUrl = remotes.get('origin');
+    if (originUrl) {
+      return formatGhRepo(originUrl);
+    }
+
+    // Last resort: first available remote
+    const firstRemote = remotes.values().next().value;
+    return firstRemote ? formatGhRepo(firstRemote) : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    return undefined;
+  }
+}
+
 export interface PRInfo {
   number: number;
   state: string;
@@ -104,6 +157,46 @@ export async function getPRInfo(prNumber: number | string, repo?: string): Promi
     };
   } catch (error) {
     throw new Error(`Failed to fetch PR info for #${prNum}: ${error}`);
+  }
+}
+
+export type CIChecksStatus = 'passing' | 'failing' | 'pending' | 'none';
+
+/**
+ * Get CI status for a branch from GitHub Actions workflow runs
+ * Queries recent workflow runs and aggregates their conclusions
+ */
+export async function getBranchCIStatus(repo: string, branch: string): Promise<CIChecksStatus> {
+  try {
+    // Query recent workflow runs for this branch
+    const { stdout } = await execa('gh', [
+      'api',
+      `repos/${repo}/actions/runs`,
+      '--jq',
+      `.workflow_runs | map(select(.head_branch == "${branch}")) | .[0:10] | map(.conclusion)`,
+    ]);
+
+    const conclusions = JSON.parse(stdout) as (string | null)[];
+
+    if (!conclusions || conclusions.length === 0) {
+      return 'none';
+    }
+
+    // Check for any null conclusions (still running)
+    if (conclusions.some((c) => c === null || c === 'pending' || c === 'queued')) {
+      return 'pending';
+    }
+
+    // Check for any failures
+    if (conclusions.some((c) => c === 'failure' || c === 'cancelled' || c === 'timed_out')) {
+      return 'failing';
+    }
+
+    // All successful
+    return 'passing';
+  } catch {
+    // No workflow runs or API error
+    return 'none';
   }
 }
 

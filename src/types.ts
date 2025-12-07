@@ -22,12 +22,15 @@ export interface WorktreeMetadata {
   last_commit_date: string;
   tracking_branch: string;
 
-  // Auto-synced from GitHub
+  // Auto-synced from GitHub (PR-specific)
   pr_state?: string;
   pr_checks?: string;
   pr_reviews?: number;
   pr_labels?: string[];
   pr_updated_at?: string;
+
+  // Auto-synced from GitHub Actions (works for branches and PRs)
+  ci_checks?: 'passing' | 'failing' | 'pending' | 'none';
 
   // CI Artifacts
   ci_status?: 'complete' | 'partial' | 'incomplete';

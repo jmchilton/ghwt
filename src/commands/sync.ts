@@ -1,8 +1,8 @@
 import { join } from 'path';
 import { existsSync, readdirSync, statSync, mkdirSync } from 'fs';
 import { loadConfig, expandPath } from '../lib/config.js';
-import { getGitInfo, getUpstreamUrl } from '../lib/git.js';
-import { getPRInfo } from '../lib/github.js';
+import { getGitInfo } from '../lib/git.js';
+import { getPRInfo, getBranchCIStatus, getPRRepoUrl, getCIRepoUrl } from '../lib/github.js';
 import {
   readNote,
   updateNoteMetadata,
@@ -102,63 +102,111 @@ async function syncSingleWorktree(
     days_since_activity: daysSinceActivity,
   };
 
-  // If PR, fetch PR info
+  // Get repo info for GitHub API calls
+  // PR repo: upstream (where PRs are opened), CI repo: origin (where CI runs on your fork)
+  const prRepo = await getPRRepoUrl(worktreePath);
+  const ciRepo = await getCIRepoUrl(worktreePath);
+  const repoName = ciRepo?.split('/')[1] || project;
+
+  // If PR, fetch PR info first (from upstream where PRs are opened)
+  let prNumber: string | undefined;
   if (frontmatter.pr) {
     try {
       const prMatch = (frontmatter.pr as string).match(/\/(\d+)$/);
       if (prMatch) {
-        const prNumber = prMatch[1];
-        const upstreamUrl = await getUpstreamUrl(worktreePath);
-        const repoUrl = upstreamUrl || gitInfo.remoteUrl;
-        const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-        const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
-        const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : project;
+        prNumber = prMatch[1];
 
-        const prInfo = await getPRInfo(prNumber, ghRepo);
+        const prInfo = await getPRInfo(prNumber, prRepo);
         updates.pr_state = prInfo.state;
         updates.pr_checks = prInfo.checks;
         updates.pr_reviews = prInfo.reviews;
         updates.pr_labels = prInfo.labels;
         updates.pr_updated_at = prInfo.updatedAt;
-
-        // Smart CI artifact fetching
-        if (shouldFetchArtifacts(frontmatter, prInfo.checks)) {
-          try {
-            const artifactsPath = getCIArtifactsPath(projectsRoot, project, branchType, name);
-            mkdirSync(artifactsPath, { recursive: true });
-
-            const resume = !needsFullFetch(frontmatter, gitInfo.currentSha);
-            if (options?.verbose) {
-              console.log(`  📦 Fetching CI artifacts (${resume ? 'resume' : 'full'})...`);
-            }
-
-            await fetchCIArtifacts(
-              prNumber,
-              ghRepo || repoName,
-              artifactsPath,
-              resume,
-              repoName,
-              options,
-            );
-
-            const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
-            Object.assign(updates, ciMeta);
-
-            if (options?.verbose) {
-              console.log(
-                `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
-              );
-            }
-          } catch (error) {
-            if (options?.verbose) {
-              console.log(`  ⚠️  Failed to fetch CI artifacts: ${error}`);
-            }
-          }
-        }
       }
     } catch (error) {
       if (options?.verbose) {
         console.log(`  ⚠️  Failed to fetch PR info: ${error}`);
+      }
+    }
+  }
+
+  // Fetch CI status from GitHub Actions
+  // For PRs: try upstream first (some projects run CI on target repo), fall back to origin
+  // For branches: use origin (your fork)
+  let ciChecks: 'passing' | 'failing' | 'pending' | 'none' = 'none';
+  const ciRepoToUse = prNumber && prRepo !== ciRepo ? prRepo : ciRepo;
+
+  if (ciRepoToUse) {
+    try {
+      ciChecks = await getBranchCIStatus(ciRepoToUse, name);
+      // If PR and upstream returned 'none', try origin as fallback
+      if (
+        prNumber &&
+        ciChecks === 'none' &&
+        ciRepoToUse === prRepo &&
+        ciRepo &&
+        ciRepo !== prRepo
+      ) {
+        const originCiChecks = await getBranchCIStatus(ciRepo, name);
+        if (originCiChecks !== 'none') {
+          ciChecks = originCiChecks;
+        }
+      }
+      updates.ci_checks = ciChecks;
+      if (options?.verbose) {
+        console.log(`  🔍 CI status: ${ciChecks}`);
+      }
+    } catch (error) {
+      if (options?.verbose) {
+        console.log(`  ⚠️  Failed to fetch CI status: ${error}`);
+      }
+    }
+  }
+
+  // Smart CI artifact fetching (works for both PRs and branches)
+  // For PRs: try upstream first, fall back to origin
+  // For branches: use origin
+  if (shouldFetchArtifacts(frontmatter, updates.pr_checks, ciChecks)) {
+    const artifactRepo = prNumber && prRepo !== ciRepo ? prRepo : ciRepo;
+    if (artifactRepo) {
+      try {
+        const artifactsPath = getCIArtifactsPath(projectsRoot, project, branchType, name);
+        mkdirSync(artifactsPath, { recursive: true });
+
+        const resume = !needsFullFetch(frontmatter, gitInfo.currentSha);
+        if (options?.verbose) {
+          console.log(`  📦 Fetching CI artifacts (${resume ? 'resume' : 'full'})...`);
+        }
+
+        // Use PR number if available, otherwise use branch name
+        const ref = prNumber || name;
+
+        try {
+          await fetchCIArtifacts(ref, artifactRepo, artifactsPath, resume, repoName, options);
+        } catch (upstreamError) {
+          // If PR and upstream failed, try origin as fallback
+          if (prNumber && artifactRepo === prRepo && ciRepo && ciRepo !== prRepo) {
+            if (options?.verbose) {
+              console.log(`  ⚠️  Upstream failed, trying origin...`);
+            }
+            await fetchCIArtifacts(ref, ciRepo, artifactsPath, resume, repoName, options);
+          } else {
+            throw upstreamError;
+          }
+        }
+
+        const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
+        Object.assign(updates, ciMeta);
+
+        if (options?.verbose) {
+          console.log(
+            `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
+          );
+        }
+      } catch (error) {
+        if (options?.verbose) {
+          console.log(`  ⚠️  Failed to fetch CI artifacts: ${error}`);
+        }
       }
     }
   }
@@ -296,71 +344,107 @@ export async function syncCommand(
           days_since_activity: daysSinceActivity,
         };
 
-        // If PR, fetch PR info
+        // Get repo info for GitHub API calls
+        // PR repo: upstream (where PRs are opened), CI repo: origin (where CI runs on your fork)
+        const prRepo = await getPRRepoUrl(worktreePath);
+        const ciRepo = await getCIRepoUrl(worktreePath);
+        const repoName = ciRepo?.split('/')[1] || proj;
+        const { branchType, name } = parseBranchFromOldFormat(branch);
+
+        // If PR, fetch PR info first (from upstream where PRs are opened)
+        let prNumber: string | undefined;
         if (frontmatter.pr) {
           try {
-            // Extract PR number from URL
             const prMatch = (frontmatter.pr as string).match(/\/(\d+)$/);
             if (prMatch) {
-              const prNumber = prMatch[1];
-              // Get repo context from worktree - prefer upstream for forked repos
-              const upstreamUrl = await getUpstreamUrl(worktreePath);
-              const repoUrl = upstreamUrl || gitInfo.remoteUrl;
-              const repoMatch = repoUrl.match(/[:/]([^/]+)\/(.+?)(?:\.git)?$/);
-              const ghRepo = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : undefined;
-              const repoName = repoMatch ? repoMatch[2].replace(/\.git$/, '') : proj;
+              prNumber = prMatch[1];
 
-              const prInfo = await getPRInfo(prNumber, ghRepo);
+              const prInfo = await getPRInfo(prNumber, prRepo);
               updates.pr_state = prInfo.state;
               updates.pr_checks = prInfo.checks;
               updates.pr_reviews = prInfo.reviews;
               updates.pr_labels = prInfo.labels;
               updates.pr_updated_at = prInfo.updatedAt;
-
-              // Smart CI artifact fetching (only for PRs)
-              if (frontmatter.pr && shouldFetchArtifacts(frontmatter, prInfo.checks)) {
-                try {
-                  const { branchType, name } = parseBranchFromOldFormat(branch);
-                  const artifactsPath = getCIArtifactsPath(projectsRoot, proj, branchType, name);
-
-                  // Create directory if it doesn't exist
-                  mkdirSync(artifactsPath, { recursive: true });
-
-                  // Determine if we need full fetch or can resume
-                  const resume = !needsFullFetch(frontmatter, gitInfo.currentSha);
-
-                  if (options?.verbose) {
-                    console.log(`  📦 Fetching CI artifacts (${resume ? 'resume' : 'full'})...`);
-                  }
-
-                  await fetchCIArtifacts(
-                    prNumber,
-                    ghRepo || repoName,
-                    artifactsPath,
-                    resume,
-                    repoName,
-                    options,
-                  );
-
-                  // Parse CI summary and update metadata
-                  const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
-                  Object.assign(updates, ciMeta);
-
-                  if (options?.verbose) {
-                    console.log(
-                      `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
-                    );
-                  }
-                } catch (error) {
-                  if (options?.verbose) {
-                    console.log(`  ⚠️  Failed to fetch CI artifacts: ${error}`);
-                  }
-                }
-              }
             }
           } catch (error) {
             if (options?.verbose) {
               console.log(`⚠️  Failed to fetch PR info: ${error}`);
+            }
+          }
+        }
+
+        // Fetch CI status from GitHub Actions
+        // For PRs: try upstream first, fall back to origin
+        // For branches: use origin
+        let ciChecks: 'passing' | 'failing' | 'pending' | 'none' = 'none';
+        const ciRepoToUse = prNumber && prRepo !== ciRepo ? prRepo : ciRepo;
+
+        if (ciRepoToUse) {
+          try {
+            ciChecks = await getBranchCIStatus(ciRepoToUse, name);
+            // If PR and upstream returned 'none', try origin as fallback
+            if (
+              prNumber &&
+              ciChecks === 'none' &&
+              ciRepoToUse === prRepo &&
+              ciRepo &&
+              ciRepo !== prRepo
+            ) {
+              const originCiChecks = await getBranchCIStatus(ciRepo, name);
+              if (originCiChecks !== 'none') {
+                ciChecks = originCiChecks;
+              }
+            }
+            updates.ci_checks = ciChecks;
+          } catch {
+            // Ignore CI status fetch errors in bulk sync
+          }
+        }
+
+        // Smart CI artifact fetching (works for both PRs and branches)
+        // For PRs: try upstream first, fall back to origin
+        // For branches: use origin
+        if (shouldFetchArtifacts(frontmatter, updates.pr_checks, ciChecks)) {
+          const artifactRepo = prNumber && prRepo !== ciRepo ? prRepo : ciRepo;
+          if (artifactRepo) {
+            try {
+              const artifactsPath = getCIArtifactsPath(projectsRoot, proj, branchType, name);
+              mkdirSync(artifactsPath, { recursive: true });
+
+              const resume = !needsFullFetch(frontmatter, gitInfo.currentSha);
+              if (options?.verbose) {
+                console.log(`  📦 Fetching CI artifacts (${resume ? 'resume' : 'full'})...`);
+              }
+
+              // Use PR number if available, otherwise use branch name
+              const ref = prNumber || name;
+
+              try {
+                await fetchCIArtifacts(ref, artifactRepo, artifactsPath, resume, repoName, options);
+              } catch (upstreamError) {
+                // If PR and upstream failed, try origin as fallback
+                if (prNumber && artifactRepo === prRepo && ciRepo && ciRepo !== prRepo) {
+                  if (options?.verbose) {
+                    console.log(`  ⚠️  Upstream failed, trying origin...`);
+                  }
+                  await fetchCIArtifacts(ref, ciRepo, artifactsPath, resume, repoName, options);
+                } else {
+                  throw upstreamError;
+                }
+              }
+
+              const ciMeta = await getCIMetadata(artifactsPath, gitInfo.currentSha);
+              Object.assign(updates, ciMeta);
+
+              if (options?.verbose) {
+                console.log(
+                  `  ✅ CI artifacts: ${ciMeta.ci_status} (${ciMeta.ci_failed_tests} test failures, ${ciMeta.ci_linter_errors} lint errors)`,
+                );
+              }
+            } catch (error) {
+              if (options?.verbose) {
+                console.log(`  ⚠️  Failed to fetch CI artifacts: ${error}`);
+              }
             }
           }
         }
