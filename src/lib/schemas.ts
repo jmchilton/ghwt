@@ -41,6 +41,11 @@ export const GhwtConfigSchema = z
       .string()
       .optional()
       .describe('Shell command executor ID for Obsidian integration'),
+    setupPreCommitHooks: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe('Automatically setup pre-commit hooks when creating worktrees'),
   })
   .strict() // Reject unknown properties
   .describe('GHWT global configuration');

@@ -22,6 +22,7 @@ import { getWorktreePath, getNotePath } from '../lib/paths.js';
 import { parseBranchArg } from '../lib/branch-parser.js';
 import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
+import { setupPreCommitHooks } from '../lib/pre-commit.js';
 
 export async function createCommand(
   project: string,
@@ -189,6 +190,25 @@ export async function createCommand(
       await execa('git', args, {
         cwd: repoPath,
       });
+    }
+  }
+
+  // Setup pre-commit hooks if enabled in config
+  if (config.setupPreCommitHooks) {
+    try {
+      const preCommitResult = await setupPreCommitHooks(worktreePath);
+      if (preCommitResult.sampleFound && preCommitResult.configCopied) {
+        if (preCommitResult.preCommitInstalled) {
+          console.log('🪝 Pre-commit hooks installed');
+        } else {
+          console.log('🪝 Pre-commit config created (install pre-commit tool for hook setup)');
+        }
+      }
+      if (preCommitResult.errors.length > 0) {
+        console.log(`⚠️  Pre-commit setup: ${preCommitResult.errors.join('; ')}`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Failed to setup pre-commit hooks: ${error}`);
     }
   }
 
