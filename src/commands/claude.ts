@@ -110,6 +110,31 @@ function getStoredSessionId(notePath: string): string | undefined {
 }
 
 /**
+ * Find worktree that has a specific session ID stored.
+ * Returns { project, branch } if found, null otherwise.
+ */
+function findWorktreeBySessionId(
+  sessionId: string,
+  vaultRoot: string,
+): { project: string; branch: string } | null {
+  const worktrees = listWorktrees();
+
+  for (const wt of worktrees) {
+    // Extract branch name without type prefix for note path
+    const branchParts = wt.branch.split('/');
+    const branchName = branchParts.slice(1).join('/'); // Remove 'branch/' prefix
+    const notePath = getNotePath(vaultRoot, wt.project, branchName);
+
+    const storedId = getStoredSessionId(notePath);
+    if (storedId === sessionId) {
+      return { project: wt.project, branch: wt.branch };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Save session ID to worktree note.
  */
 function saveSessionId(notePath: string, sessionId: string): void {
@@ -138,25 +163,35 @@ export async function claudeCommand(
 
   const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
-  // For --teleport without project/branch, prompt for project and branch
+  // For --teleport without project/branch, check if session is already stored, else prompt
   if (options?.teleport && !project && !branch && !options?.this) {
-    // First, let user pick the project
-    const pickedProject = await pickProject(reposRoot);
-    if (!pickedProject) {
-      console.error(`❌ No projects found in ${reposRoot}`);
-      process.exit(1);
-    }
-    selectedProject = pickedProject;
-
-    // Then, pick existing worktree or create new one
-    const picked = await pickWorktreeOrCreate(selectedProject);
-    if (picked) {
-      selectedProject = picked.project;
-      selectedBranch = picked.branch;
+    // First, check if this session ID is already associated with a worktree
+    const existingWorktree = findWorktreeBySessionId(options.teleport, vaultRoot);
+    if (existingWorktree) {
+      console.log(
+        `📂 Found existing worktree for session: ${existingWorktree.project}/${existingWorktree.branch}`,
+      );
+      selectedProject = existingWorktree.project;
+      selectedBranch = existingWorktree.branch;
     } else {
-      // User chose to create new worktree
-      const branchName = await promptBranchName();
-      selectedBranch = `branch/${branchName}`;
+      // First, let user pick the project
+      const pickedProject = await pickProject(reposRoot);
+      if (!pickedProject) {
+        console.error(`❌ No projects found in ${reposRoot}`);
+        process.exit(1);
+      }
+      selectedProject = pickedProject;
+
+      // Then, pick existing worktree or create new one
+      const picked = await pickWorktreeOrCreate(selectedProject);
+      if (picked) {
+        selectedProject = picked.project;
+        selectedBranch = picked.branch;
+      } else {
+        // User chose to create new worktree
+        const branchName = await promptBranchName();
+        selectedBranch = `branch/${branchName}`;
+      }
     }
   } else if (options?.resume !== undefined && !project && !branch && !options?.this) {
     // For --resume without project/branch, run in current directory
