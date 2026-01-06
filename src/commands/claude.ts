@@ -1,9 +1,12 @@
 import { execa } from 'execa';
 import { existsSync, readdirSync } from 'fs';
+import { listWorktrees } from '../lib/worktree-list.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
 import { loadProjectPaths, getWorktreePath, parseBranchFromOldFormat } from '../lib/paths.js';
 import { createCommand } from './create.js';
+
+const CREATE_NEW_OPTION = '➕ Create new worktree...';
 
 /**
  * Prompt user to select a project from available repositories.
@@ -49,6 +52,41 @@ async function promptBranchName(): Promise<string> {
   return response.branch;
 }
 
+/**
+ * Pick worktree with option to create new one.
+ * Returns { project, branch } or null if user wants to create new.
+ */
+async function pickWorktreeOrCreate(
+  project: string,
+): Promise<{ project: string; branch: string } | null> {
+  const worktrees = listWorktrees(project);
+
+  const { default: Enquirer } = await import('enquirer');
+  const enquirer = new Enquirer();
+
+  // Build choices: existing worktrees + create new option
+  const choices = [...worktrees.map((wt) => wt.displayName), CREATE_NEW_OPTION];
+
+  const response = (await enquirer.prompt({
+    type: 'select',
+    name: 'selection',
+    message: `Select worktree in ${project}:`,
+    choices,
+  })) as { selection: string };
+
+  if (response.selection === CREATE_NEW_OPTION) {
+    return null; // Signal to create new
+  }
+
+  // Find matching worktree
+  const found = worktrees.find((wt) => wt.displayName === response.selection);
+  if (found) {
+    return { project: found.project, branch: found.branch };
+  }
+
+  return null;
+}
+
 export async function claudeCommand(
   project?: string,
   branch?: string,
@@ -76,13 +114,13 @@ export async function claudeCommand(
     }
     selectedProject = pickedProject;
 
-    // Then, either pick existing worktree or create new one
-    const picked = await pickWorktree(selectedProject);
-    if (picked.project && picked.branch) {
+    // Then, pick existing worktree or create new one
+    const picked = await pickWorktreeOrCreate(selectedProject);
+    if (picked) {
       selectedProject = picked.project;
       selectedBranch = picked.branch;
     } else {
-      // User cancelled picker or no worktrees exist, prompt for new branch
+      // User chose to create new worktree
       const branchName = await promptBranchName();
       selectedBranch = `branch/${branchName}`;
     }
