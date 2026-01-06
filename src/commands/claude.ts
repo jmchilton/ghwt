@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
 import { loadProjectPaths, getWorktreePath, parseBranchFromOldFormat } from '../lib/paths.js';
+import { createCommand } from './create.js';
 
 export async function claudeCommand(
   project?: string,
@@ -80,11 +81,10 @@ export async function claudeCommand(
   const { branchType, name } = parseBranchFromOldFormat(selectedBranch);
   const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, branchType, name);
 
-  // Check if worktree exists
+  // Create worktree if it doesn't exist
   if (!existsSync(worktreePath)) {
-    console.error(`❌ Worktree not found: ${worktreePath}`);
-    console.error(`💡 Create it with: ghwt create ${selectedProject} ${name}`);
-    process.exit(1);
+    console.log(`🌱 Worktree not found, creating: ${selectedProject}/${name}`);
+    await createCommand(selectedProject, name, { verbose: options?.verbose });
   }
 
   try {
