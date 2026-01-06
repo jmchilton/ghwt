@@ -16,8 +16,68 @@ export interface WorktreeContext {
 }
 
 /**
+ * Check if a directory is a git worktree by looking for a .git file (not directory).
+ * Worktrees have a .git file containing "gitdir: /path/to/main/repo/.git/worktrees/..."
+ */
+function isGitWorktree(dirPath: string): boolean {
+  const gitPath = join(dirPath, '.git');
+  if (!existsSync(gitPath)) return false;
+
+  try {
+    const stat = readdirSync(dirPath, { withFileTypes: true }).find((e) => e.name === '.git');
+    // It's a worktree if .git is a file (not a directory)
+    return stat !== undefined && stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Recursively find git worktrees under a branchType directory.
+ * Supports nested branch names like "claude/plan-index-detection".
+ */
+function findWorktreesRecursive(
+  branchTypePath: string,
+  branchType: string,
+  project: string,
+  prefix: string = '',
+): WorktreeInfo[] {
+  const worktrees: WorktreeInfo[] = [];
+
+  try {
+    const entries = readdirSync(branchTypePath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+
+      const entryPath = join(branchTypePath, entry.name);
+      const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+
+      if (isGitWorktree(entryPath)) {
+        // Found a worktree
+        worktrees.push({
+          project,
+          branch: `${branchType}/${name}`,
+          path: entryPath,
+          displayName: `${project}: ${branchType}/${name}`,
+        });
+      } else {
+        // Not a worktree, recurse into subdirectory
+        const nested = findWorktreesRecursive(entryPath, branchType, project, name);
+        worktrees.push(...nested);
+      }
+    }
+  } catch {
+    // Skip directories that can't be read
+  }
+
+  return worktrees;
+}
+
+/**
  * Get list of all worktrees, optionally filtered by project
- * Scans new hierarchical structure: worktrees/{project}/{branchType}/{name}
+ * Scans hierarchical structure: worktrees/{project}/{branchType}/{name}
+ * Supports nested branch names like "claude/plan-index-detection"
  */
 export function listWorktrees(filterProject?: string): WorktreeInfo[] {
   const config = loadConfig();
@@ -60,27 +120,9 @@ export function listWorktrees(filterProject?: string): WorktreeInfo[] {
 
           const branchTypePath = join(projectPath, branchType);
 
-          try {
-            const nameEntries = readdirSync(branchTypePath, { withFileTypes: true });
-
-            for (const nameEntry of nameEntries) {
-              if (!nameEntry.isDirectory()) continue;
-
-              const name = nameEntry.name;
-              const path = join(branchTypePath, name);
-              const branch = `${branchType}/${name}`;
-
-              worktrees.push({
-                project,
-                branch,
-                path,
-                displayName: `${project}: ${branch}`,
-              });
-            }
-          } catch {
-            // Skip branch type directories that can't be read
-            continue;
-          }
+          // Recursively find worktrees (supports nested branch names)
+          const found = findWorktreesRecursive(branchTypePath, branchType, project);
+          worktrees.push(...found);
         }
       } catch {
         // Skip project directories that can't be read
