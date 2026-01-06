@@ -1,8 +1,8 @@
 import { execa } from 'execa';
+import { existsSync } from 'fs';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
 import { loadProjectPaths, getWorktreePath, parseBranchFromOldFormat } from '../lib/paths.js';
-import { assertWorktreeExists } from '../lib/errors.js';
 
 export async function claudeCommand(
   project?: string,
@@ -18,6 +18,39 @@ export async function claudeCommand(
 ): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
+
+  // For --teleport and --resume without project/branch, run in current directory
+  const isSessionResume = options?.teleport || options?.resume !== undefined;
+  const noWorktreeSpecified = !project && !branch && !options?.this;
+
+  if (isSessionResume && noWorktreeSpecified) {
+    // Run claude with session flags in current directory
+    const args: string[] = [];
+    if (options?.teleport) {
+      args.push('--teleport', options.teleport);
+    } else if (options?.resume !== undefined) {
+      if (typeof options.resume === 'string') {
+        args.push('--resume', options.resume);
+      } else {
+        args.push('--resume');
+      }
+    }
+    if (prompt) {
+      args.push(prompt);
+    }
+
+    console.log(`🔍 Opening Claude in current directory`);
+
+    try {
+      await execa('claude', args, {
+        stdio: 'inherit',
+      });
+    } catch (error) {
+      console.error(`❌ Failed to open Claude: ${error}`);
+      process.exit(1);
+    }
+    return;
+  }
 
   // If --this flag is set, use current worktree context
   if (options?.this) {
@@ -48,7 +81,11 @@ export async function claudeCommand(
   const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, branchType, name);
 
   // Check if worktree exists
-  assertWorktreeExists(worktreePath);
+  if (!existsSync(worktreePath)) {
+    console.error(`❌ Worktree not found: ${worktreePath}`);
+    console.error(`💡 Create it with: ghwt create ${selectedProject} ${name}`);
+    process.exit(1);
+  }
 
   try {
     const args: string[] = [];
