@@ -37,6 +37,7 @@ async function pickProject(reposRoot: string): Promise<string | null> {
 
 /**
  * Prompt user to enter a branch name.
+ * Validates that name doesn't contain problematic characters.
  */
 async function promptBranchName(): Promise<string> {
   const { default: Enquirer } = await import('enquirer');
@@ -47,6 +48,11 @@ async function promptBranchName(): Promise<string> {
     name: 'branch',
     message: 'Enter branch name for new worktree:',
     initial: 'main',
+    validate: (value: string) => {
+      if (!value.trim()) return 'Branch name cannot be empty';
+      if (value.includes('/')) return 'Branch name cannot contain "/" - use dashes instead';
+      return true;
+    },
   })) as { branch: string };
 
   return response.branch;
