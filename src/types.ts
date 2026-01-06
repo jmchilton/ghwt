@@ -45,6 +45,9 @@ export interface WorktreeMetadata {
   days_since_activity: number;
   last_synced: string;
 
+  // Claude session tracking
+  claude_session_id?: string;
+
   // Manual/static fields
   project: string;
   branch: string;

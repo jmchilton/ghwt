@@ -3,8 +3,14 @@ import { existsSync, readdirSync } from 'fs';
 import { listWorktrees } from '../lib/worktree-list.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 import { resolveBranch, getCurrentWorktreeContext } from '../lib/worktree-list.js';
-import { loadProjectPaths, getWorktreePath, parseBranchFromOldFormat } from '../lib/paths.js';
+import {
+  loadProjectPaths,
+  getWorktreePath,
+  parseBranchFromOldFormat,
+  getNotePath,
+} from '../lib/paths.js';
 import { createCommand } from './create.js';
+import { readNote, updateNoteMetadata } from '../lib/obsidian.js';
 
 const CREATE_NEW_OPTION = '➕ Create new worktree...';
 
@@ -91,6 +97,30 @@ async function pickWorktreeOrCreate(
   return null;
 }
 
+/**
+ * Get stored session ID from worktree note.
+ */
+function getStoredSessionId(notePath: string): string | undefined {
+  try {
+    const { frontmatter } = readNote(notePath);
+    return frontmatter.claude_session_id as string | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Save session ID to worktree note.
+ */
+function saveSessionId(notePath: string, sessionId: string): void {
+  try {
+    updateNoteMetadata(notePath, { claude_session_id: sessionId });
+    console.log(`💾 Saved session ID to worktree note`);
+  } catch (error) {
+    console.log(`⚠️  Could not save session ID: ${error}`);
+  }
+}
+
 export async function claudeCommand(
   project?: string,
   branch?: string,
@@ -106,7 +136,7 @@ export async function claudeCommand(
   let selectedProject = project;
   let selectedBranch = branch;
 
-  const { config, projectsRoot, reposRoot } = loadProjectPaths();
+  const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
 
   // For --teleport without project/branch, prompt for project and branch
   if (options?.teleport && !project && !branch && !options?.this) {
@@ -177,6 +207,7 @@ export async function claudeCommand(
 
   const { branchType, name } = parseBranchFromOldFormat(selectedBranch);
   const worktreePath = getWorktreePath(projectsRoot, config, selectedProject, branchType, name);
+  const notePath = getNotePath(vaultRoot, selectedProject, name);
 
   // Create worktree if it doesn't exist
   if (!existsSync(worktreePath)) {
@@ -184,30 +215,52 @@ export async function claudeCommand(
     await createCommand(selectedProject, name, { verbose: options?.verbose });
   }
 
-  try {
-    const args: string[] = [];
-    if (options?.teleport) {
-      args.push('--teleport', options.teleport);
-    } else if (options?.resume !== undefined) {
-      if (typeof options.resume === 'string') {
-        args.push('--resume', options.resume);
+  // Build claude args
+  const args: string[] = [];
+  let sessionIdToSave: string | undefined;
+
+  if (options?.teleport) {
+    args.push('--teleport', options.teleport);
+    sessionIdToSave = options.teleport; // Save the teleported session ID
+  } else if (options?.resume !== undefined) {
+    if (typeof options.resume === 'string') {
+      args.push('--resume', options.resume);
+      sessionIdToSave = options.resume;
+    } else {
+      // --resume without ID: check for stored session ID
+      const storedId = getStoredSessionId(notePath);
+      if (storedId) {
+        console.log(`📂 Using stored session: ${storedId}`);
+        args.push('--resume', storedId);
       } else {
         args.push('--resume');
       }
-    } else if (options?.continue) {
-      args.push('--continue');
     }
-    if (prompt) {
-      args.push(prompt);
-    }
+  } else if (options?.continue) {
+    args.push('--continue');
+  }
 
-    console.log(`🔍 Opening Claude in ${selectedProject}/${selectedBranch}`);
+  if (prompt) {
+    args.push(prompt);
+  }
 
+  console.log(`🔍 Opening Claude in ${selectedProject}/${selectedBranch}`);
+
+  try {
     await execa('claude', args, {
       cwd: worktreePath,
       stdio: 'inherit',
     });
+
+    // Save session ID after successful run
+    if (sessionIdToSave) {
+      saveSessionId(notePath, sessionIdToSave);
+    }
   } catch (error) {
+    // Still try to save session ID even if claude exits with error (user might have Ctrl+C'd)
+    if (sessionIdToSave) {
+      saveSessionId(notePath, sessionIdToSave);
+    }
     console.error(`❌ Failed to open Claude: ${error}`);
     process.exit(1);
   }
