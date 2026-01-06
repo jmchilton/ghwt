@@ -8,7 +8,13 @@ export async function claudeCommand(
   project?: string,
   branch?: string,
   prompt?: string,
-  options?: { continue?: boolean; verbose?: boolean; this?: boolean },
+  options?: {
+    continue?: boolean;
+    resume?: boolean | string;
+    teleport?: string;
+    verbose?: boolean;
+    this?: boolean;
+  },
 ): Promise<void> {
   let selectedProject = project;
   let selectedBranch = branch;
@@ -46,7 +52,15 @@ export async function claudeCommand(
 
   try {
     const args: string[] = [];
-    if (options?.continue) {
+    if (options?.teleport) {
+      args.push('--teleport', options.teleport);
+    } else if (options?.resume !== undefined) {
+      if (typeof options.resume === 'string') {
+        args.push('--resume', options.resume);
+      } else {
+        args.push('--resume');
+      }
+    } else if (options?.continue) {
       args.push('--continue');
     }
     if (prompt) {
