@@ -220,6 +220,11 @@ program
     'Open Claude in worktree directory\nRun without args to pick from list, or with project to filter. Optional prompt or --continue flag',
   )
   .option('-c, --continue', 'Continue the most recent conversation')
+  .option(
+    '-r, --resume [session-id]',
+    'Resume a specific session by ID (or pick from list if no ID)',
+  )
+  .option('-t, --teleport <session-id>', 'Resume a web session by teleporting it to local CLI')
   .option('-v, --verbose', 'Verbose output')
   .option('--this', 'Use current worktree (requires running from within worktree)')
   .action(async (project, branch, prompt, options) => {
