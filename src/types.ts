@@ -9,6 +9,7 @@ export interface GhwtConfig {
   terminalMultiplexer?: 'tmux' | 'zellij';
   terminalUI?: 'wezterm' | 'ghostty' | 'none';
   zellijSessionsDir?: string;
+  setupPreCommitHooks?: boolean;
 }
 
 export interface WorktreeMetadata {
