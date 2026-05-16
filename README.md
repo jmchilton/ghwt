@@ -298,12 +298,22 @@ Edit `~/.ghwtrc.json`:
 
 **Terminal Configuration Options:**
 
-- `terminalMultiplexer`: `"tmux"` (default) or `"zellij"` - Which multiplexer to use for sessions
-- `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions
+- `terminalMultiplexer`: `"tmux"` (default), `"zellij"`, or `"cmux"` - Which multiplexer to use for sessions
+  - `"cmux"`: macOS-only, opt-in. cmux is a fused UI + multiplexer, so `terminalUI` is a **no-op** when this is selected (cmux _is_ the UI; ghwt never spawns wezterm/ghostty). Requires cmux >= 0.63.0 (tested against 0.64.x); ghwt probes `cmux ping` + `cmux version` at startup. Not auto-selected by `ghwt init` - set it explicitly.
+- `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions (ignored when `terminalMultiplexer: "cmux"`)
   - `"wezterm"`: Launch WezTerm with multiplexer inside (modern UI)
   - `"none"`: Launch multiplexer directly (native zellij UI or raw tmux)
 
 > **Note:** `ci-artifacts-config/` and `terminal-session-config/` directories are automatically resolved relative to `projectsRoot` and do not need to be configured.
+
+### cmux Integration (macOS, opt-in)
+
+With `terminalMultiplexer: "cmux"`, ghwt manages cmux workspaces via the `cmux` CLI only (arms-length: no linking/embedding). ghwt remains the brain (worktree lifecycle, metadata, CI intelligence); cmux is one optional body (rendering, attention UI). Workspaces are keyed by a ghwt-stamped title (`ghwt:<session-name>`), resolved fresh each call (nothing persisted). Session config `tabs`/`windows`/`panes` are flattened to cmux surfaces; `zellij_ui`/`start_suspended` have no cmux analog and are ignored, just as tmux ignores them.
+
+Two thin bridges:
+
+- **Notify bridge** - `ghwt sync` rings the worktree's cmux workspace (`cmux notify`) only on a _transition_ into needs-attention (failing PR/CI checks, uncommitted changes, or stale > 7 days), never on every sync. No-op for tmux/zellij.
+- **Sync hook bridge** - `ghwt install-sync-hook` idempotently installs a Claude Code `Stop` hook running `ghwt sync --this` (non-fatal). When Claude finishes a turn in a worktree, the worktree re-syncs and (with cmux selected) the workspace rings on a needs-attention transition. `ghwt install-sync-hook --uninstall` removes it. (cmux has no hook registry of its own - this is wired Claude-side.)
 
 ### CI Artifacts Configuration
 
@@ -555,6 +565,7 @@ src/
 - **Terminal Multiplexer** (one of):
   - `tmux` - Terminal multiplexer (default, for session persistence)
   - `zellij` - Terminal multiplexer (alternative, set `terminalMultiplexer: "zellij"` in config)
+  - `cmux` - **macOS-only**, opt-in fused UI + multiplexer (set `terminalMultiplexer: "cmux"`). Minimum supported **v0.63.0**, tested against **v0.64.x**. See https://cmux.com. Arms-length integration via the `cmux` CLI only.
 
 ## Development
 

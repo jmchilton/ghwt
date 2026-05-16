@@ -17,12 +17,40 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { listWorktrees, getCurrentWorktreeContext } from '../lib/worktree-list.js';
-import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
-import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
-import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
+import {
+  findSessionConfig,
+  loadSessionConfig,
+  getSessionManager,
+} from '../lib/terminal-session.js';
 import { getNotePath, getSessionName, parseBranchFromOldFormat } from '../lib/paths.js';
-import { WorktreeMetadata } from '../types.js';
+import { WorktreeMetadata, NoteFrontmatter } from '../types.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { needsAttention } from '../lib/attention.js';
+import { TerminalSessionManager } from '../lib/terminal-session-base.js';
+
+/**
+ * Ring the worktree's session only on a *transition* into needs-attention
+ * (avoids every-sync notification spam). No-op for tmux/zellij (no notify).
+ */
+export async function notifyOnAttentionTransition(
+  manager: TerminalSessionManager,
+  sessionName: string,
+  project: string,
+  branch: string,
+  prior: NoteFrontmatter,
+  updates: Partial<WorktreeMetadata>,
+): Promise<void> {
+  if (!manager.notify) return;
+  try {
+    const was = needsAttention(prior);
+    const now = needsAttention({ ...prior, ...(updates as NoteFrontmatter) });
+    if (!was && now) {
+      await manager.notify(sessionName, 'ghwt: needs attention', `${project}/${branch}`);
+    }
+  } catch {
+    // Notification is advisory only - never fail a sync over it.
+  }
+}
 
 interface SyncOptions {
   verbose?: boolean;
@@ -215,8 +243,7 @@ async function syncSingleWorktree(
 
   // Check/recreate session
   const sessionName = getSessionName(project, branch);
-  const manager =
-    config.terminalMultiplexer === 'zellij' ? new ZellijSessionManager() : new TmuxSessionManager();
+  const manager = getSessionManager(config);
 
   const sessionExists = await manager.sessionExists(sessionName);
   if (!sessionExists) {
@@ -240,6 +267,8 @@ async function syncSingleWorktree(
       }
     }
   }
+
+  await notifyOnAttentionTransition(manager, sessionName, project, branch, frontmatter, updates);
 
   console.log(
     `✅ Synced: ${project}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`,
@@ -452,6 +481,15 @@ export async function syncCommand(
         // Update note
         updateNoteMetadata(notePath, updates);
 
+        await notifyOnAttentionTransition(
+          getSessionManager(config),
+          getSessionName(proj, branch),
+          proj,
+          branch,
+          frontmatter,
+          updates,
+        );
+
         if (options?.verbose) {
           console.log(
             `✅ Synced: ${proj}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`,
@@ -513,10 +551,7 @@ export async function syncCommand(
     }
 
     // If worktree exists but session doesn't, recreate it
-    const manager =
-      config.terminalMultiplexer === 'zellij'
-        ? new ZellijSessionManager()
-        : new TmuxSessionManager();
+    const manager = getSessionManager(config);
 
     const sessionExists = await manager.sessionExists(sessionName);
     if (!sessionExists) {

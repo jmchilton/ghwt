@@ -79,6 +79,12 @@ export interface TerminalSessionManager {
    * Kill session
    */
   killSession(sessionName: string): Promise<void>;
+
+  /**
+   * Ring the session's surface with a desktop notification.
+   * (only cmux; ignored by tmux/zellij - they omit this method)
+   */
+  notify?(sessionName: string, title: string, subtitle?: string): Promise<void>;
 }
 
 export interface TemplateVars {
@@ -122,6 +128,21 @@ export async function isUIAvailable(ui: 'wezterm' | 'ghostty' | 'none'): Promise
   try {
     const { execa } = await import('execa');
     await execa(ui, ['--help']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if the cmux CLI is present (presence-only, never throws).
+ * Mirrors isUIAvailable: swallow errors, return boolean. Version-floor and
+ * socket-liveness enforcement live in terminal-session-cmux.ts.
+ */
+export async function isCmuxAvailable(): Promise<boolean> {
+  try {
+    const { execa } = await import('execa');
+    await execa('cmux', ['--help']);
     return true;
   } catch {
     return false;

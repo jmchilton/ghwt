@@ -9,11 +9,13 @@ import {
   TabConfig,
   TerminalSessionManager,
   isUIAvailable,
+  isCmuxAvailable,
 } from './terminal-session-base.js';
 import { validateSessionConfig } from './schemas.js';
 import { getSessionName } from './paths.js';
 import { TmuxSessionManager } from './terminal-session-tmux.js';
 import { ZellijSessionManager } from './terminal-session-zellij.js';
+import { CmuxSessionManager, assertCmuxReady } from './terminal-session-cmux.js';
 
 // Re-export for compatibility
 export type { SessionConfig, WindowConfig, TabConfig };
@@ -73,15 +75,47 @@ export function loadSessionConfig(configPath: string): SessionConfig {
 }
 
 /**
- * Get appropriate session manager based on config
+ * Get appropriate session manager based on config.
+ * Single dispatch site - sync.ts reuses this instead of duplicating the ternary.
  */
-function getSessionManager(config: GhwtConfig, verbose = false): TerminalSessionManager {
-  const multiplexer = config.terminalMultiplexer || 'tmux';
+export function getSessionManager(config: GhwtConfig, verbose = false): TerminalSessionManager {
+  switch (config.terminalMultiplexer || 'tmux') {
+    case 'zellij':
+      return new ZellijSessionManager(config, verbose);
+    case 'cmux':
+      return new CmuxSessionManager(config, verbose);
+    default:
+      return new TmuxSessionManager(config, verbose);
+  }
+}
 
-  if (multiplexer === 'zellij') {
-    return new ZellijSessionManager(config, verbose);
-  } else {
-    return new TmuxSessionManager(config, verbose);
+/**
+ * Validate the terminal UI is available, or that cmux is reachable when the
+ * cmux backend is selected (cmux is its own UI, so terminalUI is a no-op).
+ * Throws with an actionable, install hint on failure.
+ */
+async function assertSessionBackendReady(config: GhwtConfig): Promise<void> {
+  if (config.terminalMultiplexer === 'cmux') {
+    const available = await isCmuxAvailable();
+    if (!available) {
+      console.warn(`⚠️  cmux not found in PATH (terminalMultiplexer: 'cmux'). cmux is macOS-only.`);
+      console.warn(`   Install it from https://cmux.com and open the app, then retry.`);
+      throw new Error(`cmux is not available`);
+    }
+    await assertCmuxReady();
+    return;
+  }
+
+  const ui = (config.terminalUI || 'wezterm') as 'wezterm' | 'ghostty' | 'none';
+  const uiAvailable = await isUIAvailable(ui);
+  if (!uiAvailable && ui !== 'none') {
+    console.warn(`⚠️  Terminal UI '${ui}' not found in PATH. Install it first:`);
+    if (ui === 'ghostty') {
+      console.warn(`   brew install ghostty  (or download from https://ghostty.org)`);
+    } else if (ui === 'wezterm') {
+      console.warn(`   brew install wezterm`);
+    }
+    throw new Error(`Terminal UI '${ui}' is not available`);
   }
 }
 
@@ -108,18 +142,8 @@ export async function launchSession(
   const manager = getSessionManager(ghwtConfig, verbose);
 
   try {
-    // Validate UI is available before creating session
-    const ui = (ghwtConfig.terminalUI || 'wezterm') as 'wezterm' | 'ghostty' | 'none';
-    const uiAvailable = await isUIAvailable(ui);
-    if (!uiAvailable && ui !== 'none') {
-      console.warn(`⚠️  Terminal UI '${ui}' not found in PATH. Install it first:`);
-      if (ui === 'ghostty') {
-        console.warn(`   brew install ghostty  (or download from https://ghostty.org)`);
-      } else if (ui === 'wezterm') {
-        console.warn(`   brew install wezterm`);
-      }
-      throw new Error(`Terminal UI '${ui}' is not available`);
-    }
+    // Validate backend (UI app, or cmux reachability + version floor)
+    await assertSessionBackendReady(ghwtConfig);
 
     // Create session with optional note path for template substitution
     await manager.createSession(sessionName, config, worktreePath, project, branch, notePath);
@@ -180,22 +204,17 @@ export async function attachCommand(
       console.log(`✅ Created session: ${sessionName}`);
     }
 
-    // Validate UI is available
-    const ui = (config.terminalUI || 'wezterm') as 'wezterm' | 'ghostty' | 'none';
-    const uiAvailable = await isUIAvailable(ui);
-    if (!uiAvailable && ui !== 'none') {
-      console.warn(`⚠️  Terminal UI '${ui}' not found in PATH. Install it first:`);
-      if (ui === 'ghostty') {
-        console.warn(`   brew install ghostty  (or download from https://ghostty.org)`);
-      } else if (ui === 'wezterm') {
-        console.warn(`   brew install wezterm`);
-      }
-      throw new Error(`Terminal UI '${ui}' is not available`);
-    }
+    // Validate backend (UI app, or cmux reachability + version floor)
+    await assertSessionBackendReady(config);
 
-    // Handle UI app mode for tmux (detach other clients first)
-    if ((ui === 'wezterm' || ui === 'ghostty') && config.terminalMultiplexer !== 'zellij') {
-      // For tmux with UI app: detach other clients before attaching
+    // Handle UI app mode for tmux (detach other clients first).
+    // cmux/zellij manage their own attach; only tmux needs a client detach.
+    const ui = (config.terminalUI || 'wezterm') as 'wezterm' | 'ghostty' | 'none';
+    if (
+      (ui === 'wezterm' || ui === 'ghostty') &&
+      config.terminalMultiplexer !== 'zellij' &&
+      config.terminalMultiplexer !== 'cmux'
+    ) {
       const { execa } = await import('execa');
       try {
         await execa('tmux', ['detach-client', '-s', sessionName]);

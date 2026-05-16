@@ -6,7 +6,7 @@ export interface GhwtConfig {
   syncInterval: number | null;
   obsidianVaultName?: string;
   shellCommandExecuteId?: string;
-  terminalMultiplexer?: 'tmux' | 'zellij';
+  terminalMultiplexer?: 'tmux' | 'zellij' | 'cmux';
   terminalUI?: 'wezterm' | 'ghostty' | 'none';
   zellijSessionsDir?: string;
   setupPreCommitHooks?: boolean;
