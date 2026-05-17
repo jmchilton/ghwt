@@ -34,14 +34,19 @@ beforeEach(() => {
   workspacesJson = '[]';
   process.env.GHWT_CMUX_SURFACE_DELAY_MS = '0';
 
-  let surfaceN = 0;
+  // Pane model: a workspace is created with one initial pane (pane:1);
+  // each additional ghwt pane is a new-split that returns a fresh pane ref.
+  let paneN = 1;
   execaMock.mockImplementation(async (_bin: string, args: string[]) => {
     const sub = args[0];
     if (sub === 'list-workspaces') return { stdout: workspacesJson };
     if (sub === 'new-workspace') return { stdout: 'OK workspace:1' };
-    if (sub === 'new-surface' || sub === 'new-split') {
-      surfaceN += 1;
-      return { stdout: `OK surface:${surfaceN}` };
+    if (sub === 'list-panes') {
+      return { stdout: JSON.stringify({ panes: [{ ref: 'pane:1', index: 0, focused: true }] }) };
+    }
+    if (sub === 'new-split') {
+      paneN += 1;
+      return { stdout: JSON.stringify({ pane_ref: `pane:${paneN}` }) };
     }
     if (sub === 'version') return { stdout: 'cmux 0.64.1' };
     return { stdout: '' };
@@ -49,7 +54,7 @@ beforeEach(() => {
 });
 
 describe('CmuxSessionManager.createSession', () => {
-  it('emits ordered cmux calls: workspace, rename(title), surface, send cascade, split', async () => {
+  it('emits ordered cmux calls: workspace, rename(title), initial pane, focus+send cascade, split', async () => {
     const mgr = new CmuxSessionManager();
     const config: SessionConfig = {
       name: 'sample',
@@ -64,17 +69,22 @@ describe('CmuxSessionManager.createSession', () => {
       ['list-workspaces', '--json'],
       ['new-workspace', '--cwd', '/wt', '--json'],
       ['rename-workspace', '--workspace', 'workspace:1', 'ghwt:proj-branch'],
-      // window "editor" -> new surface (no initial surface ref returned)
-      ['new-surface', '--workspace', 'workspace:1', '--json'],
-      ['send', 'nvm use\n', '--surface', 'surface:1'],
-      ['send', 'vim\n', '--surface', 'surface:1'],
-      // pane 2 -> split off the window surface
-      ['new-split', 'right', '--surface', 'surface:1', '--json'],
-      ['send', 'nvm use\n', '--surface', 'surface:2'],
-      ['send', 'npm test\n', '--surface', 'surface:2'],
-      // window "shell" -> new surface, no command
-      ['new-surface', '--workspace', 'workspace:1', '--json'],
-      ['send', 'nvm use\n', '--surface', 'surface:3'],
+      // initial pane discovered from the freshly created workspace
+      ['list-panes', '--workspace', 'workspace:1', '--json'],
+      // editor pane 0 reuses the initial pane; send addressed by --workspace
+      // (send --surface is rejected by cmux even for live surfaces)
+      ['focus-pane', '--pane', 'pane:1', '--workspace', 'workspace:1'],
+      ['send', 'nvm use\n', '--workspace', 'workspace:1'],
+      ['send', 'vim\n', '--workspace', 'workspace:1'],
+      // editor pane 1 -> split (new pane), focus, cascade
+      ['new-split', 'right', '--workspace', 'workspace:1', '--json'],
+      ['focus-pane', '--pane', 'pane:2', '--workspace', 'workspace:1'],
+      ['send', 'nvm use\n', '--workspace', 'workspace:1'],
+      ['send', 'npm test\n', '--workspace', 'workspace:1'],
+      // window "shell" -> split (new pane), focus, cascade, no command
+      ['new-split', 'right', '--workspace', 'workspace:1', '--json'],
+      ['focus-pane', '--pane', 'pane:3', '--workspace', 'workspace:1'],
+      ['send', 'nvm use\n', '--workspace', 'workspace:1'],
     ]);
   });
 
@@ -89,8 +99,8 @@ describe('CmuxSessionManager.createSession', () => {
 
     const sends = cmuxCalls().filter((a) => a[0] === 'send');
     expect(sends).toEqual([
-      ['send', 'cd /wt/server\n', '--surface', 'surface:1'],
-      ['send', 'npm start\n', '--surface', 'surface:1'],
+      ['send', 'cd /wt/server\n', '--workspace', 'workspace:1'],
+      ['send', 'npm start\n', '--workspace', 'workspace:1'],
     ]);
   });
 
@@ -175,17 +185,19 @@ describe('CmuxSessionManager attach/kill resolve ref then map to cmux verbs', ()
   });
 });
 
-describe('createSession initial-surface reuse (new-workspace returns a surface)', () => {
-  it('reuses the workspace initial surface for window 0, allocates fresh after', async () => {
-    let surfaceN = 0;
+describe('createSession pane model (initial pane reuse + split + parsing)', () => {
+  it('reuses the workspace initial pane for window 0, splits a fresh pane after', async () => {
+    let paneN = 0;
     execaMock.mockImplementation(async (_bin: string, args: string[]) => {
       const sub = args[0];
       if (sub === 'list-workspaces') return { stdout: '[]' };
-      // new-workspace surfaces the initial surface ref alongside the workspace.
-      if (sub === 'new-workspace') return { stdout: 'OK workspace:1 surface:1' };
-      if (sub === 'new-surface' || sub === 'new-split') {
-        surfaceN += 1;
-        return { stdout: `OK surface:${100 + surfaceN}` };
+      if (sub === 'new-workspace') return { stdout: 'OK workspace:1' };
+      if (sub === 'list-panes') {
+        return { stdout: JSON.stringify({ panes: [{ ref: 'pane:1', index: 0 }] }) };
+      }
+      if (sub === 'new-split') {
+        paneN += 1;
+        return { stdout: JSON.stringify({ pane_ref: `pane:${100 + paneN}` }) };
       }
       return { stdout: '' };
     });
@@ -201,28 +213,36 @@ describe('createSession initial-surface reuse (new-workspace returns a surface)'
     await mgr.createSession('p-b', config, '/wt', 'p', 'b');
 
     const c = cmuxCalls();
-    // Window 0 reuses surface:1 (the initial surface) - no new-surface for it.
-    expect(c).toContainEqual(['send', 'echo a\n', '--surface', 'surface:1']);
-    // Window 1 allocates a fresh surface (first new-surface call).
-    const newSurfaceCalls = c.filter((a) => a[0] === 'new-surface');
-    expect(newSurfaceCalls).toEqual([['new-surface', '--workspace', 'workspace:1', '--json']]);
-    expect(c).toContainEqual(['send', 'echo b\n', '--surface', 'surface:101']);
+    // Window 0 reuses the initial pane:1 - no new-split for it.
+    expect(c).toContainEqual(['focus-pane', '--pane', 'pane:1', '--workspace', 'workspace:1']);
+    expect(c).toContainEqual(['send', 'echo a\n', '--workspace', 'workspace:1']);
+    // Window 1 splits a fresh pane (first and only new-split call).
+    const splitCalls = c.filter((a) => a[0] === 'new-split');
+    expect(splitCalls).toEqual([['new-split', 'right', '--workspace', 'workspace:1', '--json']]);
+    expect(c).toContainEqual(['focus-pane', '--pane', 'pane:101', '--workspace', 'workspace:1']);
+    expect(c).toContainEqual(['send', 'echo b\n', '--workspace', 'workspace:1']);
   });
 
-  it('parses --json surface_ref form (not just OK text)', async () => {
+  it('parses --json ref forms for new-workspace and new-split (not just OK text)', async () => {
     execaMock.mockImplementation(async (_bin: string, args: string[]) => {
       const sub = args[0];
       if (sub === 'list-workspaces') return { stdout: '[]' };
       if (sub === 'new-workspace')
         return { stdout: JSON.stringify({ workspace_ref: 'workspace:4' }) };
-      if (sub === 'new-surface') return { stdout: JSON.stringify({ surface_ref: 'surface:9' }) };
+      if (sub === 'list-panes') {
+        return { stdout: JSON.stringify({ panes: [{ ref: 'pane:7' }] }) };
+      }
+      if (sub === 'new-split') return { stdout: JSON.stringify({ pane_ref: 'pane:9' }) };
       return { stdout: '' };
     });
 
     const mgr = new CmuxSessionManager();
     await mgr.createSession(
       'p-b',
-      { name: 's', windows: [{ name: 'w', panes: ['ls'] }] },
+      {
+        name: 's',
+        windows: [{ name: 'w', panes: ['ls'] }, { name: 'x' }],
+      },
       '/wt',
       'p',
       'b',
@@ -230,8 +250,11 @@ describe('createSession initial-surface reuse (new-workspace returns a surface)'
 
     const c = cmuxCalls();
     expect(c).toContainEqual(['rename-workspace', '--workspace', 'workspace:4', 'ghwt:p-b']);
-    expect(c).toContainEqual(['new-surface', '--workspace', 'workspace:4', '--json']);
-    expect(c).toContainEqual(['send', 'ls\n', '--surface', 'surface:9']);
+    expect(c).toContainEqual(['list-panes', '--workspace', 'workspace:4', '--json']);
+    // window 0 reuses initial pane:7; window 1 splits -> pane:9 (json pane_ref)
+    expect(c).toContainEqual(['focus-pane', '--pane', 'pane:7', '--workspace', 'workspace:4']);
+    expect(c).toContainEqual(['send', 'ls\n', '--workspace', 'workspace:4']);
+    expect(c).toContainEqual(['focus-pane', '--pane', 'pane:9', '--workspace', 'workspace:4']);
   });
 });
 
@@ -269,6 +292,75 @@ describe('assertCmuxReady', () => {
       return { stdout: '' };
     });
     await expect(assertCmuxReady()).resolves.toBeUndefined();
+  });
+});
+
+describe('hardened cmux exec (cmux exits 0 on errors; stale refs misroute)', () => {
+  it('assertCmuxReady: broken-pipe auth refusal -> actionable #1864 message, not "install"', async () => {
+    execaMock.mockImplementation(async (_b: string, args: string[]) => {
+      if (args[0] === 'ping') {
+        return { stdout: '', stderr: 'Error: Failed to write to socket (Broken pipe, errno 32)' };
+      }
+      return { stdout: '' };
+    });
+    await expect(assertCmuxReady()).rejects.toThrow(/refusing external CLI access/);
+    await expect(assertCmuxReady()).rejects.toThrow(/cmux#1864/);
+  });
+
+  it('assertCmuxReady: "Access denied" classified as auth refusal (not unreachable)', async () => {
+    execaMock.mockImplementation(async (_b: string, args: string[]) => {
+      if (args[0] === 'ping') {
+        return { stdout: 'ERROR: Access denied — only processes started inside cmux can connect' };
+      }
+      return { stdout: '' };
+    });
+    await expect(assertCmuxReady()).rejects.toThrow(/refusing external CLI access/);
+  });
+
+  it('createSession: aborts when a fresh workspace reports no panes (misroute guard)', async () => {
+    execaMock.mockImplementation(async (_b: string, args: string[]) => {
+      const sub = args[0];
+      if (sub === 'list-workspaces') return { stdout: '[]' };
+      if (sub === 'new-workspace') return { stdout: 'OK workspace:1' };
+      if (sub === 'list-panes') return { stdout: JSON.stringify({ panes: [] }) };
+      return { stdout: '' };
+    });
+    const mgr = new CmuxSessionManager();
+    await expect(
+      mgr.createSession(
+        'p-b',
+        { name: 's', windows: [{ name: 'w', panes: ['ls'] }] },
+        '/wt',
+        'p',
+        'b',
+      ),
+    ).rejects.toThrow(/no panes|wrong workspace/);
+    // The guard must fire before any send could misroute.
+    expect(cmuxCalls().filter((a) => a[0] === 'send')).toEqual([]);
+  });
+
+  it('createSession: focus-pane "not_found" (exit 0) aborts instead of misrouting the send', async () => {
+    execaMock.mockImplementation(async (_b: string, args: string[]) => {
+      const sub = args[0];
+      if (sub === 'list-workspaces') return { stdout: '[]' };
+      if (sub === 'new-workspace') return { stdout: 'OK workspace:1' };
+      if (sub === 'list-panes') return { stdout: JSON.stringify({ panes: [{ ref: 'pane:1' }] }) };
+      // cmux returns errors on stdout with exit code 0:
+      if (sub === 'focus-pane') return { stdout: 'Error: not_found: Pane not found' };
+      return { stdout: '' };
+    });
+    const mgr = new CmuxSessionManager();
+    await expect(
+      mgr.createSession(
+        'p-b',
+        { name: 's', windows: [{ name: 'w', panes: ['ls'] }] },
+        '/wt',
+        'p',
+        'b',
+      ),
+    ).rejects.toThrow(/focus-pane failed|not_found/);
+    // Critical safety property: no command was sent anywhere.
+    expect(cmuxCalls().filter((a) => a[0] === 'send')).toEqual([]);
   });
 });
 

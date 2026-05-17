@@ -299,7 +299,7 @@ Edit `~/.ghwtrc.json`:
 **Terminal Configuration Options:**
 
 - `terminalMultiplexer`: `"tmux"` (default), `"zellij"`, or `"cmux"` - Which multiplexer to use for sessions
-  - `"cmux"`: macOS-only, opt-in. cmux is a fused UI + multiplexer, so `terminalUI` is a **no-op** when this is selected (cmux _is_ the UI; ghwt never spawns wezterm/ghostty). Requires cmux >= 0.63.0 (tested against 0.64.x); ghwt probes `cmux ping` + `cmux version` at startup. Not auto-selected by `ghwt init` - set it explicitly.
+  - `"cmux"`: macOS-only, opt-in. cmux is a fused UI + multiplexer, so `terminalUI` is a **no-op** when this is selected (cmux _is_ the UI; ghwt never spawns wezterm/ghostty). Requires cmux >= 0.63.0 (tested against 0.64.x); ghwt probes `cmux ping` + `cmux version` at startup. **Also requires cmux's external CLI/socket access to be enabled** (see "External CLI access" below) - by default cmux refuses connections from processes it did not spawn. Not auto-selected by `ghwt init` - set it explicitly.
 - `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions (ignored when `terminalMultiplexer: "cmux"`)
   - `"wezterm"`: Launch WezTerm with multiplexer inside (modern UI)
   - `"none"`: Launch multiplexer directly (native zellij UI or raw tmux)
@@ -308,7 +308,9 @@ Edit `~/.ghwtrc.json`:
 
 ### cmux Integration (macOS, opt-in)
 
-With `terminalMultiplexer: "cmux"`, ghwt manages cmux workspaces via the `cmux` CLI only (arms-length: no linking/embedding). ghwt remains the brain (worktree lifecycle, metadata, CI intelligence); cmux is one optional body (rendering, attention UI). Workspaces are keyed by a ghwt-stamped title (`ghwt:<session-name>`), resolved fresh each call (nothing persisted). Session config `tabs`/`windows`/`panes` are flattened to cmux surfaces; `zellij_ui`/`start_suspended` have no cmux analog and are ignored, just as tmux ignores them.
+With `terminalMultiplexer: "cmux"`, ghwt manages cmux workspaces via the `cmux` CLI only (arms-length: no linking/embedding). ghwt remains the brain (worktree lifecycle, metadata, CI intelligence); cmux is one optional body (rendering, attention UI). Workspaces are keyed by a ghwt-stamped title (`ghwt:<session-name>`), resolved fresh each call (nothing persisted). Session config `tabs`/`windows`/`panes` are flattened to cmux **panes** - each ghwt pane becomes one cmux pane (a live terminal). cmux _surfaces_ are deliberately not used: `new-surface` stacks non-live views inside a single pane and only the active one accepts input, so panes (`new-split`) are the addressable terminal unit. `zellij_ui`/`start_suspended` have no cmux analog and are ignored, just as tmux ignores them.
+
+> **External CLI access (required).** cmux's control socket only accepts connections from processes cmux itself spawned ("Access denied - only processes started inside cmux can connect"). ghwt drives cmux from _outside_ its terminals (it creates the workspace before any cmux terminal exists), so the cmux backend **requires cmux's external CLI/socket access setting to be enabled**. There is no password bypass ([manaflow-ai/cmux#1864](https://github.com/manaflow-ai/cmux/issues/1864) is an open, unimplemented request). If it is not enabled, ghwt fails fast with an actionable message naming the setting (it does **not** misreport this as "cmux not installed"). Without that setting the cmux backend cannot function; tmux/zellij are unaffected.
 
 Two thin bridges:
 
@@ -565,7 +567,7 @@ src/
 - **Terminal Multiplexer** (one of):
   - `tmux` - Terminal multiplexer (default, for session persistence)
   - `zellij` - Terminal multiplexer (alternative, set `terminalMultiplexer: "zellij"` in config)
-  - `cmux` - **macOS-only**, opt-in fused UI + multiplexer (set `terminalMultiplexer: "cmux"`). Minimum supported **v0.63.0**, tested against **v0.64.x**. See https://cmux.com. Arms-length integration via the `cmux` CLI only.
+  - `cmux` - **macOS-only**, opt-in fused UI + multiplexer (set `terminalMultiplexer: "cmux"`). Minimum supported **v0.63.0**, tested against **v0.64.x**. See https://cmux.com. Arms-length integration via the `cmux` CLI only. **Requires cmux's external CLI/socket access setting enabled** (cmux blocks externally-spawned callers by default; no password bypass - [manaflow-ai/cmux#1864](https://github.com/manaflow-ai/cmux/issues/1864)).
 
 ## Development
 
