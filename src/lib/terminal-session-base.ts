@@ -1,4 +1,9 @@
 import { createHash } from 'crypto';
+import type { AgentStatus } from '../types.js';
+
+// Re-exported so session backends can import it from this module alongside
+// the manager interface (canonical definition lives in types.ts).
+export type { AgentStatus };
 
 export interface WindowConfig {
   name: string;
@@ -85,6 +90,23 @@ export interface TerminalSessionManager {
    * (only cmux; ignored by tmux/zellij - they omit this method)
    */
   notify?(sessionName: string, title: string, subtitle?: string): Promise<void>;
+
+  /**
+   * Map ghwt session name -> most-urgent live agent status for that session.
+   * (only herdr; omitted by tmux/zellij/cmux exactly like notify).
+   *
+   * Return-value contract (matters for clearing stale state in sync):
+   *   - `Map` (possibly empty) = authoritative current snapshot. A session
+   *     absent from the map has no live agent right now; the caller MUST treat
+   *     that as "clear", not "no data" (else a one-time `blocked` sticks in
+   *     the note forever after the agent exits).
+   *   - `null` = could not determine (backend unreachable / CLI failure).
+   *     The caller must leave the existing agent_status untouched so a
+   *     transient herdr outage doesn't wipe every session's state.
+   * Never throws (a transient failure resolves to `null`), so sync never
+   * fails over this advisory signal.
+   */
+  agentStatuses?(): Promise<Map<string, AgentStatus> | null>;
 }
 
 export interface TemplateVars {
@@ -143,6 +165,21 @@ export async function isCmuxAvailable(): Promise<boolean> {
   try {
     const { execa } = await import('execa');
     await execa('cmux', ['--help']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if the herdr CLI is present (presence-only, never throws).
+ * Mirrors isCmuxAvailable: swallow errors, return boolean. Server-liveness
+ * and version-floor enforcement live in terminal-session-herdr.ts.
+ */
+export async function isHerdrAvailable(): Promise<boolean> {
+  try {
+    const { execa } = await import('execa');
+    await execa('herdr', ['--version']);
     return true;
   } catch {
     return false;

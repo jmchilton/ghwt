@@ -27,6 +27,16 @@ describe('needsAttention truth table', () => {
     expect(needsAttention({ has_uncommitted_changes: true })).toBe(true);
   });
 
+  it('true when the agent is blocked (waiting on the human)', () => {
+    expect(needsAttention({ agent_status: 'blocked' })).toBe(true);
+  });
+
+  it('false for non-blocked agent states', () => {
+    for (const agent_status of ['idle', 'working', 'done', 'unknown']) {
+      expect(needsAttention({ agent_status })).toBe(false);
+    }
+  });
+
   it('true only past the staleness threshold', () => {
     expect(needsAttention({ days_since_activity: ATTENTION_STALE_DAYS })).toBe(false);
     expect(needsAttention({ days_since_activity: ATTENTION_STALE_DAYS + 1 })).toBe(true);
