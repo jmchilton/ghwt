@@ -5,6 +5,16 @@ import { tmpdir } from 'os';
 import { listWorktrees, resolveBranch } from '../../lib/worktree-list.js';
 import { writeFileSync } from 'fs';
 
+/**
+ * listWorktrees only counts real git worktrees, which git marks with a `.git`
+ * *file* (a gitdir pointer) rather than a `.git` directory. A bare mkdir is not
+ * discoverable.
+ */
+function makeWorktree(path: string): void {
+  mkdirSync(path, { recursive: true });
+  writeFileSync(join(path, '.git'), `gitdir: ${join(path, '.git-dir')}\n`);
+}
+
 describe('worktree-list', () => {
   it('listWorktrees discovers worktrees in hierarchical structure', () => {
     // Create temporary directory structure
@@ -13,15 +23,9 @@ describe('worktree-list', () => {
 
     try {
       // Create test worktree structure
-      mkdirSync(join(worktreesDir, 'galaxy', 'branch', 'cool-feature'), {
-        recursive: true,
-      });
-      mkdirSync(join(worktreesDir, 'galaxy', 'pr', '1234'), {
-        recursive: true,
-      });
-      mkdirSync(join(worktreesDir, 'gxformat2', 'branch', 'test-branch'), {
-        recursive: true,
-      });
+      makeWorktree(join(worktreesDir, 'galaxy', 'branch', 'cool-feature'));
+      makeWorktree(join(worktreesDir, 'galaxy', 'pr', '1234'));
+      makeWorktree(join(worktreesDir, 'gxformat2', 'branch', 'test-branch'));
 
       // Set GHWT_CONFIG to point to test root
       const configPath = join(testRoot, '.ghwtrc.json');
@@ -203,12 +207,8 @@ describe('worktree-list', () => {
 
     try {
       // Create worktrees for multiple projects
-      mkdirSync(join(worktreesDir, 'galaxy', 'branch', 'feature'), {
-        recursive: true,
-      });
-      mkdirSync(join(worktreesDir, 'gxformat2', 'branch', 'feature'), {
-        recursive: true,
-      });
+      makeWorktree(join(worktreesDir, 'galaxy', 'branch', 'feature'));
+      makeWorktree(join(worktreesDir, 'gxformat2', 'branch', 'feature'));
 
       const configPath = join(testRoot, '.ghwtrc.json');
       writeFileSync(
