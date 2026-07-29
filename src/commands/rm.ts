@@ -3,6 +3,8 @@ import { existsSync, rmSync, mkdirSync, cpSync } from 'fs';
 import { execa } from 'execa';
 import { killSession } from '../lib/terminal-session.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { resolveBranch } from '../lib/worktree-list.js';
+import { assertWorktreeExists } from '../lib/errors.js';
 import {
   loadProjectPaths,
   getWorktreePath,
@@ -23,6 +25,10 @@ export async function rmCommand(
     const picked = await pickWorktree(project);
     project = picked.project;
     branch = picked.branch;
+  } else {
+    // Resolve branch to get the full reference with type prefix, so a bare PR
+    // number lands on pr/<n> rather than the branch/ fallback
+    branch = resolveBranch(project, branch);
   }
 
   const { config, projectsRoot, reposRoot, vaultRoot } = loadProjectPaths();
@@ -44,18 +50,17 @@ export async function rmCommand(
     console.log(`⚠️  Terminal session not found: ${sessionName}`);
   }
 
-  // Check if worktree exists
-  if (!existsSync(worktreePath)) {
-    console.log(`⚠️  Worktree not found: ${worktreePath}`);
-  } else {
-    // Remove worktree
-    try {
-      rmSync(worktreePath, { recursive: true, force: true });
-      console.log(`✅ Deleted worktree: ${worktreePath}`);
-    } catch (error) {
-      console.error(`❌ Failed to delete worktree: ${error}`);
-      throw error;
-    }
+  // Bail out before the note is archived - a missing worktree means the argument
+  // did not name anything, not that there is nothing left to do
+  assertWorktreeExists(worktreePath);
+
+  // Remove worktree
+  try {
+    rmSync(worktreePath, { recursive: true, force: true });
+    console.log(`✅ Deleted worktree: ${worktreePath}`);
+  } catch (error) {
+    console.error(`❌ Failed to delete worktree: ${error}`);
+    throw error;
   }
 
   // Prune repository
