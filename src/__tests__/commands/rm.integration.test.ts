@@ -36,7 +36,7 @@ describe('rm command: branch argument resolution', () => {
     // A real repo so `git worktree prune` has somewhere to run
     const repoPath = join(testRoot, 'repositories', 'galaxy');
     mkdirSync(repoPath, { recursive: true });
-    await execa('git', ['init'], { cwd: repoPath });
+    await execa('git', ['init', '-b', 'main'], { cwd: repoPath });
 
     const configPath = join(testRoot, '.ghwtrc.json');
     writeFileSync(

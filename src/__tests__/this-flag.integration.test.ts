@@ -75,7 +75,7 @@ describe('--this flag: getCurrentWorktreeContext', () => {
   async function setupTestRepo(projectName: string): Promise<string> {
     const repoPath = join(reposRoot, projectName);
     mkdirSync(repoPath, { recursive: true });
-    await execa('git', ['init', '--bare', repoPath]);
+    await execa('git', ['init', '--bare', '-b', 'main', repoPath]);
 
     const tmpClone = mkdtempSync(join(tmpdir(), 'clone-'));
     const tmpCloneCwd = process.cwd();
@@ -116,12 +116,12 @@ describe('--this flag: getCurrentWorktreeContext', () => {
     const branchName = branchType === 'pr' ? `pr-${name}` : name;
 
     try {
-      await execa('git', ['init'], { cwd: worktreePath });
+      await execa('git', ['init', '-b', 'main'], { cwd: worktreePath });
       await execa('git', ['remote', 'add', 'origin', repoPath], { cwd: worktreePath });
       await execa('git', ['fetch', 'origin'], { cwd: worktreePath });
       await execa('git', ['checkout', '-b', branchName, 'origin/main'], { cwd: worktreePath });
     } catch {
-      await execa('git', ['init'], { cwd: worktreePath });
+      await execa('git', ['init', '-b', 'main'], { cwd: worktreePath });
     }
 
     return worktreePath;

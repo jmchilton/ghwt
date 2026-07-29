@@ -118,7 +118,7 @@ describe('create command: base branch selection', () => {
     mkdirSync(repoPath, { recursive: true });
 
     // Initialize git repo
-    await execa('git', ['init'], { cwd: repoPath });
+    await execa('git', ['init', '-b', 'main'], { cwd: repoPath });
     await execa('git', ['config', 'user.email', 'test@example.com'], { cwd: repoPath });
     await execa('git', ['config', 'user.name', 'Test User'], { cwd: repoPath });
 

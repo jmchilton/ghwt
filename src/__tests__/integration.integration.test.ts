@@ -65,7 +65,7 @@ describe('Integration: Create → List → Remove workflow', () => {
     mkdirSync(repoPath, { recursive: true });
 
     // Initialize bare git repo
-    await execa('git', ['init', '--bare', repoPath]);
+    await execa('git', ['init', '--bare', '-b', 'main', repoPath]);
 
     // Create a temporary clone to set up initial content
     const tmpClone = mkdtempSync(join(tmpdir(), 'clone-'));
@@ -110,13 +110,13 @@ describe('Integration: Create → List → Remove workflow', () => {
 
     try {
       // Create and check out the branch in the worktree
-      await execa('git', ['init'], { cwd: worktreePath });
+      await execa('git', ['init', '-b', 'main'], { cwd: worktreePath });
       await execa('git', ['remote', 'add', 'origin', repoPath], { cwd: worktreePath });
       await execa('git', ['fetch', 'origin'], { cwd: worktreePath });
       await execa('git', ['checkout', '-b', branchName, 'origin/main'], { cwd: worktreePath });
     } catch {
       // Fallback: just ensure directory exists with git repo
-      await execa('git', ['init'], { cwd: worktreePath });
+      await execa('git', ['init', '-b', 'main'], { cwd: worktreePath });
     }
 
     return worktreePath;
