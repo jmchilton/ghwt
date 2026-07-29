@@ -23,6 +23,7 @@ const DEFAULT_CONFIG: GhwtConfig = {
   syncInterval: null,
   terminalMultiplexer: 'tmux',
   terminalUI: 'wezterm',
+  editor: 'none',
 };
 
 export function loadConfig(): GhwtConfig {

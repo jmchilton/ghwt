@@ -8,6 +8,7 @@ export interface GhwtConfig {
   shellCommandExecuteId?: string;
   terminalMultiplexer?: 'tmux' | 'zellij';
   terminalUI?: 'wezterm' | 'ghostty' | 'none';
+  editor?: 'code' | 'cursor' | 'none';
   zellijSessionsDir?: string;
   setupPreCommitHooks?: boolean;
 }

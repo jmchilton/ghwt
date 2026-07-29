@@ -33,6 +33,10 @@ export const GhwtConfigSchema = z
       .enum(['wezterm', 'ghostty', 'none'])
       .default('wezterm')
       .describe('Terminal UI application'),
+    editor: z
+      .enum(['code', 'cursor', 'none'])
+      .default('none')
+      .describe('Editor to open automatically when a worktree is created'),
     obsidianVaultName: z
       .string()
       .optional()
