@@ -292,7 +292,8 @@ Edit `~/.ghwtrc.json`:
   "syncInterval": null,
   "defaultBaseBranch": "dev",
   "terminalMultiplexer": "tmux",
-  "terminalUI": "wezterm"
+  "terminalUI": "wezterm",
+  "editor": "none"
 }
 ```
 
@@ -302,6 +303,15 @@ Edit `~/.ghwtrc.json`:
 - `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions
   - `"wezterm"`: Launch WezTerm with multiplexer inside (modern UI)
   - `"none"`: Launch multiplexer directly (native zellij UI or raw tmux)
+
+**Editor Configuration Options:**
+
+- `editor`: `"none"` (default), `"code"`, or `"cursor"` - Which editor `ghwt create` opens on
+  the new worktree
+  - `"none"`: Don't open an editor; run `ghwt code` or `ghwt cursor` when you want one
+  - `"code"`: Open VS Code
+  - `"cursor"`: Open Cursor
+  - Ignored if the chosen editor's CLI isn't on `PATH`
 
 > **Note:** `ci-artifacts-config/` and `terminal-session-config/` directories are automatically resolved relative to `projectsRoot` and do not need to be configured.
 

@@ -24,6 +24,11 @@ import { assertRepoExists } from '../lib/errors.js';
 import { WorktreeMetadata } from '../types.js';
 import { setupPreCommitHooks } from '../lib/pre-commit.js';
 
+const EDITOR_LABELS = {
+  code: 'VS Code',
+  cursor: 'Cursor',
+} as const;
+
 export async function createCommand(
   project: string,
   branchArg: string,
@@ -264,13 +269,13 @@ export async function createCommand(
   console.log(`🪶 Note created: ${notePath}`);
 
   // Open tools
-  const codeAvailable = await commandExists('code');
+  const editor = config.editor ?? 'none';
   const obsidianAvailable = await commandExists('open');
 
-  if (codeAvailable) {
+  if (editor !== 'none' && (await commandExists(editor))) {
     try {
-      await execa('code', [worktreePath]);
-      console.log('💻 Opened in VS Code');
+      await execa(editor, [worktreePath]);
+      console.log(`💻 Opened in ${EDITOR_LABELS[editor]}`);
     } catch {
       // Silently fail if opening fails
     }
