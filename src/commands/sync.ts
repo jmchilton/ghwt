@@ -17,12 +17,74 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { listWorktrees, getCurrentWorktreeContext } from '../lib/worktree-list.js';
-import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
-import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
-import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
+import {
+  findSessionConfig,
+  loadSessionConfig,
+  getSessionManager,
+} from '../lib/terminal-session.js';
 import { getNotePath, getSessionName, parseBranchFromOldFormat } from '../lib/paths.js';
-import { WorktreeMetadata } from '../types.js';
+import { WorktreeMetadata, NoteFrontmatter, AgentStatus } from '../types.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
+import { needsAttention } from '../lib/attention.js';
+import { TerminalSessionManager } from '../lib/terminal-session-base.js';
+
+/**
+ * Best-effort fetch of live agent state keyed by ghwt session name. Returns
+ * `null` when there is no authoritative snapshot (backend not agent-aware, or
+ * the fetch failed) - the caller must then leave agent_status untouched. A
+ * non-null map (even empty) is authoritative: a session absent from it has no
+ * live agent and its stale agent_status must be cleared. Never throws (same
+ * advisory contract as the notify bridge).
+ */
+async function fetchAgentStatuses(
+  manager: TerminalSessionManager,
+): Promise<Map<string, AgentStatus> | null> {
+  if (!manager.agentStatuses) return null;
+  try {
+    return await manager.agentStatuses();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Apply an authoritative agent-state snapshot to a worktree's updates.
+ * Absent-from-map => the agent is gone; write 'unknown' so a one-time
+ * 'blocked' does not stick in the note forever (the spread merge in
+ * updateNoteMetadata would otherwise preserve the old value).
+ */
+function applyAgentStatus(
+  updates: Partial<WorktreeMetadata>,
+  snapshot: Map<string, AgentStatus> | null,
+  sessionName: string,
+): void {
+  if (!snapshot) return;
+  updates.agent_status = snapshot.get(sessionName) ?? 'unknown';
+}
+
+/**
+ * Ring the worktree's session only on a *transition* into needs-attention
+ * (avoids every-sync notification spam). No-op for tmux/zellij (no notify).
+ */
+export async function notifyOnAttentionTransition(
+  manager: TerminalSessionManager,
+  sessionName: string,
+  project: string,
+  branch: string,
+  prior: NoteFrontmatter,
+  updates: Partial<WorktreeMetadata>,
+): Promise<void> {
+  if (!manager.notify) return;
+  try {
+    const was = needsAttention(prior);
+    const now = needsAttention({ ...prior, ...(updates as NoteFrontmatter) });
+    if (!was && now) {
+      await manager.notify(sessionName, 'ghwt: needs attention', `${project}/${branch}`);
+    }
+  } catch {
+    // Notification is advisory only - never fail a sync over it.
+  }
+}
 
 interface SyncOptions {
   verbose?: boolean;
@@ -211,13 +273,16 @@ async function syncSingleWorktree(
     }
   }
 
+  const sessionName = getSessionName(project, branch);
+  const manager = getSessionManager(config);
+
+  // Live agent state (herdr only; null otherwise). Set before the metadata
+  // write so the dashboard reflects it and needsAttention() sees it.
+  applyAgentStatus(updates, await fetchAgentStatuses(manager), sessionName);
+
   updateNoteMetadata(notePath, updates);
 
   // Check/recreate session
-  const sessionName = getSessionName(project, branch);
-  const manager =
-    config.terminalMultiplexer === 'zellij' ? new ZellijSessionManager() : new TmuxSessionManager();
-
   const sessionExists = await manager.sessionExists(sessionName);
   if (!sessionExists) {
     const configPath = findSessionConfig(project, config);
@@ -240,6 +305,8 @@ async function syncSingleWorktree(
       }
     }
   }
+
+  await notifyOnAttentionTransition(manager, sessionName, project, branch, frontmatter, updates);
 
   console.log(
     `✅ Synced: ${project}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`,
@@ -295,6 +362,11 @@ export async function syncCommand(
 
   let syncedCount = 0;
   let errorCount = 0;
+
+  // Live agent state, fetched once for the whole bulk sync (herdr does two
+  // CLI calls per fetch - doing it per-note would be wasteful). No-op map for
+  // non-agent-aware backends.
+  const agentStatusBySession = await fetchAgentStatuses(getSessionManager(config));
 
   // Scan projects
   const projectDirs = selectedProject
@@ -449,8 +521,22 @@ export async function syncCommand(
           }
         }
 
+        // Live agent state (herdr only) before the metadata write so the
+        // dashboard reflects it and the attention transition sees it.
+        const sessionName = getSessionName(proj, branch);
+        applyAgentStatus(updates, agentStatusBySession, sessionName);
+
         // Update note
         updateNoteMetadata(notePath, updates);
+
+        await notifyOnAttentionTransition(
+          getSessionManager(config),
+          sessionName,
+          proj,
+          branch,
+          frontmatter,
+          updates,
+        );
 
         if (options?.verbose) {
           console.log(
@@ -513,10 +599,7 @@ export async function syncCommand(
     }
 
     // If worktree exists but session doesn't, recreate it
-    const manager =
-      config.terminalMultiplexer === 'zellij'
-        ? new ZellijSessionManager()
-        : new TmuxSessionManager();
+    const manager = getSessionManager(config);
 
     const sessionExists = await manager.sessionExists(sessionName);
     if (!sessionExists) {

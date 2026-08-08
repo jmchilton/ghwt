@@ -6,12 +6,19 @@ export interface GhwtConfig {
   syncInterval: number | null;
   obsidianVaultName?: string;
   shellCommandExecuteId?: string;
-  terminalMultiplexer?: 'tmux' | 'zellij';
+  terminalMultiplexer?: 'tmux' | 'zellij' | 'cmux' | 'herdr';
   terminalUI?: 'wezterm' | 'ghostty' | 'none';
   editor?: 'code' | 'cursor' | 'none';
   zellijSessionsDir?: string;
   setupPreCommitHooks?: boolean;
 }
+
+/**
+ * Live coding-agent state for a session, as reported by an agent-aware
+ * terminal backend (herdr). 'blocked' = agent waiting on the human, which
+ * feeds the needs-attention model.
+ */
+export type AgentStatus = 'idle' | 'working' | 'blocked' | 'done' | 'unknown';
 
 export interface WorktreeMetadata {
   // Auto-synced from git
@@ -49,6 +56,9 @@ export interface WorktreeMetadata {
 
   // Claude session tracking
   claude_session_id?: string;
+
+  // Live agent state (only populated by agent-aware backends, e.g. herdr)
+  agent_status?: AgentStatus;
 
   // Manual/static fields
   project: string;

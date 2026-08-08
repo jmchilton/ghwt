@@ -26,9 +26,9 @@ export const GhwtConfigSchema = z
       .default(null)
       .describe('Sync interval in seconds (minimum 60, null for no auto-sync)'),
     terminalMultiplexer: z
-      .enum(['tmux', 'zellij'])
+      .enum(['tmux', 'zellij', 'cmux', 'herdr'])
       .default('tmux')
-      .describe('Terminal multiplexer to use for sessions'),
+      .describe('Terminal multiplexer to use for sessions (cmux is macOS-only)'),
     terminalUI: z
       .enum(['wezterm', 'ghostty', 'none'])
       .default('wezterm')

@@ -299,8 +299,10 @@ Edit `~/.ghwtrc.json`:
 
 **Terminal Configuration Options:**
 
-- `terminalMultiplexer`: `"tmux"` (default) or `"zellij"` - Which multiplexer to use for sessions
-- `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions
+- `terminalMultiplexer`: `"tmux"` (default), `"zellij"`, `"cmux"`, or `"herdr"` - Which multiplexer to use for sessions
+  - `"cmux"`: macOS-only, opt-in. cmux is a fused UI + multiplexer, so `terminalUI` is a **no-op** when this is selected (cmux _is_ the UI; ghwt never spawns wezterm/ghostty). Requires cmux >= 0.63.0 (tested against 0.64.x); ghwt probes `cmux ping` + `cmux version` at startup. **Also requires cmux's external CLI/socket access to be enabled** (see "External CLI access" below) - by default cmux refuses connections from processes it did not spawn. Not auto-selected by `ghwt init` - set it explicitly.
+  - `"herdr"`: Linux/macOS, opt-in. herdr is a TUI multiplexer, so `terminalUI` **is** honored (ghwt launches herdr inside wezterm/ghostty, like tmux/zellij). Requires herdr >= 0.5.10 and its background server already running; ghwt probes `herdr --version` + `herdr session list --json` at startup and fails fast (it does **not** auto-spawn herdr's server - run `herdr` once yourself). Not auto-selected by `ghwt init` - set it explicitly.
+- `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions (ignored when `terminalMultiplexer: "cmux"`; honored for `"herdr"`)
   - `"wezterm"`: Launch WezTerm with multiplexer inside (modern UI)
   - `"none"`: Launch multiplexer directly (native zellij UI or raw tmux)
 
@@ -314,6 +316,25 @@ Edit `~/.ghwtrc.json`:
   - Ignored if the chosen editor's CLI isn't on `PATH`
 
 > **Note:** `ci-artifacts-config/` and `terminal-session-config/` directories are automatically resolved relative to `projectsRoot` and do not need to be configured.
+
+### cmux Integration (macOS, opt-in)
+
+With `terminalMultiplexer: "cmux"`, ghwt manages cmux workspaces via the `cmux` CLI only (arms-length: no linking/embedding). ghwt remains the brain (worktree lifecycle, metadata, CI intelligence); cmux is one optional body (rendering, attention UI). Workspaces are keyed by a ghwt-stamped title (`ghwt:<session-name>`), resolved fresh each call (nothing persisted). Session config `tabs`/`windows`/`panes` are flattened to cmux **panes** - each ghwt pane becomes one cmux pane (a live terminal). cmux _surfaces_ are deliberately not used: `new-surface` stacks non-live views inside a single pane and only the active one accepts input, so panes (`new-split`) are the addressable terminal unit. `zellij_ui`/`start_suspended` have no cmux analog and are ignored, just as tmux ignores them.
+
+> **External CLI access (required).** cmux's control socket only accepts connections from processes cmux itself spawned ("Access denied - only processes started inside cmux can connect"). ghwt drives cmux from _outside_ its terminals (it creates the workspace before any cmux terminal exists), so the cmux backend **requires cmux's external CLI/socket access setting to be enabled**. There is no password bypass ([manaflow-ai/cmux#1864](https://github.com/manaflow-ai/cmux/issues/1864) is an open, unimplemented request). If it is not enabled, ghwt fails fast with an actionable message naming the setting (it does **not** misreport this as "cmux not installed"). Without that setting the cmux backend cannot function; tmux/zellij are unaffected.
+
+Two thin bridges:
+
+- **Notify bridge** - `ghwt sync` rings the worktree's cmux workspace (`cmux notify`) only on a _transition_ into needs-attention (failing PR/CI checks, uncommitted changes, or stale > 7 days), never on every sync. No-op for tmux/zellij.
+- **Sync hook bridge** - `ghwt install-sync-hook` idempotently installs a Claude Code `Stop` hook running `ghwt sync --this` (non-fatal). When Claude finishes a turn in a worktree, the worktree re-syncs and (with cmux selected) the workspace rings on a needs-attention transition. `ghwt install-sync-hook --uninstall` removes it. (cmux has no hook registry of its own - this is wired Claude-side.)
+
+### herdr Integration (Linux/macOS, opt-in)
+
+With `terminalMultiplexer: "herdr"`, ghwt manages [herdr](https://herdr.dev) workspaces via the `herdr` CLI only (arms-length: no linking; herdr is AGPL-3.0, but shelling out to a separate binary is not linking and does not affect ghwt's MIT license). ghwt remains the brain (worktree lifecycle, metadata, CI intelligence); herdr is one optional body. Each worktree maps to one herdr **workspace**, labelled `ghwt:<session-name>` and resolved by label each call (herdr ids are not stable across server restarts; nothing is persisted). Session config `tabs`/`windows`/`panes` are flattened to herdr **panes** - each ghwt pane becomes one pane via `pane split --cwd` + `pane run`. `zellij_ui`/`start_suspended` have no herdr analog and are ignored, just as tmux/cmux ignore them.
+
+Unlike cmux, herdr is a far thinner adapter: `workspace create` returns the workspace + root pane ids directly (no title-resolve round-trip), `pane run` executes commands with no shell-not-ready race, `pane split --cwd` sets per-pane cwd and targets a specific pane (no focus/`cd` hacks), herdr exits non-zero with a structured `{"error":...}` on failure (no exit-0 output sniffing), and its socket is the documented interface for external drivers (no cmux-style external-access wall). herdr is a TUI multiplexer like tmux/zellij, so `terminalUI` is honored (ghwt launches `herdr` inside wezterm/ghostty/none with the workspace pre-focused).
+
+> **No notify bridge.** herdr exposes no external notification trigger (no `herdr notify`); it detects per-pane agent state itself and self-notifies. So the herdr backend deliberately omits `notify` - the sync notify bridge no-ops for herdr exactly as it does for tmux/zellij. herdr's own agent-state detection (idle/working/blocked) is the intended attention signal; wiring it into ghwt's needs-attention model is a planned follow-up, not part of this backend.
 
 ### CI Artifacts Configuration
 
@@ -565,6 +586,8 @@ src/
 - **Terminal Multiplexer** (one of):
   - `tmux` - Terminal multiplexer (default, for session persistence)
   - `zellij` - Terminal multiplexer (alternative, set `terminalMultiplexer: "zellij"` in config)
+  - `cmux` - **macOS-only**, opt-in fused UI + multiplexer (set `terminalMultiplexer: "cmux"`). Minimum supported **v0.63.0**, tested against **v0.64.x**. See https://cmux.com. Arms-length integration via the `cmux` CLI only. **Requires cmux's external CLI/socket access setting enabled** (cmux blocks externally-spawned callers by default; no password bypass - [manaflow-ai/cmux#1864](https://github.com/manaflow-ai/cmux/issues/1864)).
+  - `herdr` - **Linux/macOS**, opt-in TUI multiplexer (set `terminalMultiplexer: "herdr"`). Minimum supported **v0.5.10** (validated against server protocol 6). See https://herdr.dev. Arms-length integration via the `herdr` CLI only; requires herdr's background server already running (ghwt does not auto-spawn it). `terminalUI` is honored (herdr runs inside wezterm/ghostty like tmux/zellij).
 
 ## Development
 

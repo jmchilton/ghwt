@@ -135,9 +135,9 @@ SORT created DESC
 ## Needs Attention
 
 \`\`\`dataview
-TABLE project, branch, pr_checks, commits_ahead, days_since_activity
+TABLE project, branch, pr_checks, agent_status, commits_ahead, days_since_activity
 FROM "projects"
-WHERE (pr_checks = "failing" OR days_since_activity > 7 OR has_uncommitted_changes = true)
+WHERE (pr_checks = "failing" OR days_since_activity > 7 OR has_uncommitted_changes = true OR agent_status = "blocked")
 SORT days_since_activity DESC
 \`\`\`
 

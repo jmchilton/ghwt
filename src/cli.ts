@@ -21,6 +21,7 @@ import { ciDownloadCommand } from './commands/ci-artifacts-download.js';
 import { pathCiArtifactsCommand } from './commands/path-ci-artifacts.js';
 import { pathNoteCommand } from './commands/path-note.js';
 import { updateAgentCommandsCommand } from './commands/update-agent-commands.js';
+import { installSyncHookCommand } from './commands/install-sync-hook.js';
 
 const program = new Command();
 
@@ -396,6 +397,19 @@ program
   .action(async (options) => {
     try {
       await updateAgentCommandsCommand(options);
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('install-sync-hook')
+  .description('Install a Claude Code Stop hook running "ghwt sync --this" (cmux bridge)')
+  .option('--uninstall', 'Remove the hook instead of installing it')
+  .action(async (options) => {
+    try {
+      await installSyncHookCommand(options);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
