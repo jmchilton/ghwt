@@ -47,7 +47,6 @@ describe('rm command: branch argument resolution', () => {
         worktreesDir: 'worktrees',
         vaultPath: join(testRoot, 'vault'),
         obsidianVaultName: 'test-vault',
-        terminalMultiplexer: 'tmux',
         syncInterval: null,
       }),
     );

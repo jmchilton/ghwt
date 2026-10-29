@@ -87,7 +87,6 @@ export function generateNoteBody(metadata: Partial<WorktreeMetadata>): string {
 
       quickActionsSection += `[📝 Open Code](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=code&_project=${project}&_worktree=${worktree})\n`;
       quickActionsSection += `[📄 Open Note](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=note&_project=${project}&_worktree=${worktree})\n`;
-      quickActionsSection += `[⌨️  Open Terminal](obsidian://shell-commands/?vault=${vault}&execute=${executeId}&_subcommand=attach&_project=${project}&_worktree=${worktree})\n`;
     }
   } catch {
     // If config fails, skip quick actions

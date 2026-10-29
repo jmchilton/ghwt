@@ -6,7 +6,6 @@ import { createCommand } from './commands/create.js';
 import { syncCommand } from './commands/sync.js';
 import { rmCommand } from './commands/rm.js';
 import { cloneCommand } from './commands/clone.js';
-import { attachCmd } from './commands/attach.js';
 import { attachPrCommand } from './commands/attach-pr.js';
 import { codeCommand } from './commands/code.js';
 import { noteCommand } from './commands/note.js';
@@ -15,7 +14,6 @@ import { claudeCommand } from './commands/claude.js';
 import { cursorCommand } from './commands/cursor.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { lintCommand } from './commands/lint.js';
-import { cleanSessionCommand } from './commands/clean-session.js';
 import { ciCleanCommand } from './commands/ci-artifacts-clean.js';
 import { ciDownloadCommand } from './commands/ci-artifacts-download.js';
 import { pathCiArtifactsCommand } from './commands/path-ci-artifacts.js';
@@ -95,10 +93,9 @@ program
   .description(
     'Remove a worktree, prune repository, and archive Obsidian note\nRun without args to pick from list, or with project to filter',
   )
-  .option('-v, --verbose', 'Verbose output')
-  .action(async (project, branch, options) => {
+  .action(async (project, branch) => {
     try {
-      await rmCommand(project, branch, options);
+      await rmCommand(project, branch);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -120,30 +117,6 @@ program
         ...options,
         noPush: options.push === false,
         noForkCheck: options.forkCheck === false,
-      });
-    } catch (error) {
-      console.error('Error:', error);
-      process.exit(1);
-    }
-  });
-
-program
-  .command('attach [project] [branch]')
-  .description(
-    'Attach to an existing worktree terminal session\nRun without args to pick from list, or with project to filter',
-  )
-  .option(
-    '--existing-terminal',
-    'Reuse existing terminal window instead of launching new wezterm process',
-  )
-  .option('-v, --verbose', 'Verbose output')
-  .option('--this', 'Use current worktree (requires running from within worktree)')
-  .action(async (project, branch, cmdOptions) => {
-    try {
-      await attachCmd(project, branch, {
-        existingTerminal: cmdOptions.existingTerminal,
-        verbose: cmdOptions.verbose,
-        this: cmdOptions.this,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -269,7 +242,6 @@ program
   .command('lint')
   .description('Validate ghwt configuration files')
   .option('--verbose', 'Show detailed validation messages')
-  .option('--session-only', 'Only check session configs')
   .option('--config-only', 'Only check global config')
   .action(async (options) => {
     try {
@@ -289,53 +261,6 @@ program
   .action(async (project, branch, options) => {
     try {
       await ciCleanCommand(project, branch, options);
-    } catch (error) {
-      console.error('Error:', error);
-      process.exit(1);
-    }
-  });
-
-program
-  .command('clean-session [project] [branch]')
-  .description('Kill a ghwt terminal session (or all with --all)')
-  .option('--this', 'Clean session for current worktree')
-  .option('--all', 'Clean all ghwt sessions')
-  .option('--force', 'Skip confirmation prompt (only with --all)')
-  .option('--verbose', 'Show which sessions are being killed')
-  .action(async (project, branch, options) => {
-    try {
-      await cleanSessionCommand(project, branch, options);
-    } catch (error) {
-      console.error('Error:', error);
-      process.exit(1);
-    }
-  });
-
-// Shortcut alias for clean-session --all
-program
-  .command('clean-session-all')
-  .description('Clean all ghwt sessions (shortcut for "clean-session --all")')
-  .option('--force', 'Skip confirmation prompt')
-  .option('--verbose', 'Show which sessions are being killed')
-  .action(async (options) => {
-    try {
-      await cleanSessionCommand(undefined, undefined, { ...options, all: true });
-    } catch (error) {
-      console.error('Error:', error);
-      process.exit(1);
-    }
-  });
-
-// Backward compatibility alias
-program
-  .command('clean-sessions')
-  .description('(Deprecated) Use "clean-session --all" instead')
-  .option('--force', 'Skip confirmation prompt')
-  .option('--verbose', 'Show which sessions are being killed')
-  .action(async (options) => {
-    console.warn('⚠️  clean-sessions is deprecated. Use "clean-session --all" instead.');
-    try {
-      await cleanSessionCommand(undefined, undefined, { ...options, all: true });
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

@@ -21,8 +21,6 @@ const DEFAULT_CONFIG: GhwtConfig = {
   worktreesDir: 'worktrees',
   vaultPath: '~/Library/Mobile Documents/iCloud~md~obsidian/Documents/projects',
   syncInterval: null,
-  terminalMultiplexer: 'tmux',
-  terminalUI: 'wezterm',
   editor: 'none',
 };
 
@@ -68,8 +66,4 @@ export function getCiArtifactsDir(config: GhwtConfig): string {
 
 export function getCiArtifactsConfigDir(config: GhwtConfig): string {
   return join(expandPath(config.projectsRoot), 'ci-artifacts-config');
-}
-
-export function getTerminalSessionConfigDir(config: GhwtConfig): string {
-  return join(expandPath(config.projectsRoot), 'terminal-session-config');
 }

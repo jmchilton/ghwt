@@ -35,7 +35,11 @@ describe('Lint command: end-to-end configuration validation', () => {
   afterEach(() => {
     // Restore original environment
     process.chdir(originalCwd);
-    process.env.GHWT_CONFIG = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.GHWT_CONFIG;
+    } else {
+      process.env.GHWT_CONFIG = originalEnv;
+    }
     process.exit = originalExit;
 
     // Clean up test directory
@@ -53,8 +57,6 @@ describe('Lint command: end-to-end configuration validation', () => {
       worktreesDir: 'worktrees',
       vaultPath,
       syncInterval: null,
-      terminalMultiplexer: 'tmux',
-      terminalUI: 'wezterm',
     };
   }
 
@@ -143,88 +145,6 @@ describe('Lint command: end-to-end configuration validation', () => {
     expect(errorThrown).toBeTruthy();
   });
 
-  it('validates valid session config YAML', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
-
-    // Create full structure
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
-
-    // Create session config directory
-    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
-    mkdirSync(sessionConfigDir, { recursive: true });
-
-    // Write valid session config
-    const validSessionConfig = `
-name: test-session
-windows:
-  - name: main
-    panes:
-      - echo "starting"
-`;
-    writeFileSync(join(sessionConfigDir, 'test.ghwt-session.yaml'), validSessionConfig);
-
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should validate successfully
-    await lintCommand();
-  });
-
-  it('detects invalid session config', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
-
-    // Create full structure
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
-
-    // Create session config directory
-    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
-    mkdirSync(sessionConfigDir, { recursive: true });
-
-    // Write invalid session config (missing required fields)
-    const invalidSessionConfig = `
-name: test-session
-# Missing windows/tabs
-`;
-    writeFileSync(join(sessionConfigDir, 'invalid.ghwt-session.yaml'), invalidSessionConfig);
-
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should error due to invalid session config
-    let errorThrown = false;
-    try {
-      await lintCommand();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('process.exit')) {
-        errorThrown = true;
-      }
-    }
-
-    expect(errorThrown).toBeTruthy();
-  });
-
-  it('detects missing session config directory warning', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
-
-    // Create structure but NOT session config directory
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
-
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should warn about missing session config dir
-    await lintCommand();
-  });
-
   it('validates valid worktree notes', async () => {
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
@@ -306,45 +226,21 @@ branch: cool-feature
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
 
-    // Create structure but skip session configs
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
+    // Missing directories would fail a full lint
+    saveTestConfig(createTestConfig(projectsRoot, vaultPath));
 
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should only validate global config and structure, skip session configs
     await lintCommand({ configOnly: true });
   });
 
-  it('supports --session-only option', async () => {
+  it('rejects removed terminal session config keys', async () => {
     const projectsRoot = join(testRoot, 'projects');
     const vaultPath = join(testRoot, 'vault');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ ...createTestConfig(projectsRoot, vaultPath), terminalMultiplexer: 'tmux' }),
+    );
 
-    // Create structure
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
-
-    // Create session config directory with valid config
-    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
-    mkdirSync(sessionConfigDir, { recursive: true });
-
-    const validSessionConfig = `
-name: test-session
-windows:
-  - name: main
-    panes:
-      - echo "test"
-`;
-    writeFileSync(join(sessionConfigDir, 'test.ghwt-session.yaml'), validSessionConfig);
-
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should only validate session configs, skip global config check
-    await lintCommand({ sessionOnly: true });
+    await expect(lintCommand({ configOnly: true })).rejects.toThrow('process.exit(1)');
   });
 
   it('validates multiple valid worktree notes', async () => {
@@ -394,41 +290,6 @@ last_synced: 2024-11-13T10:00:00Z
     saveTestConfig(config);
 
     // Should validate both notes successfully
-    await lintCommand();
-  });
-
-  it('validates session config as JSON', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
-
-    // Create full structure
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
-
-    // Create session config directory
-    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
-    mkdirSync(sessionConfigDir, { recursive: true });
-
-    // Write valid session config as JSON
-    const jsonSessionConfig = {
-      name: 'test-session',
-      windows: [
-        {
-          name: 'main',
-          panes: ['echo "test"'],
-        },
-      ],
-    };
-    writeFileSync(
-      join(sessionConfigDir, 'test.ghwt-session.json'),
-      JSON.stringify(jsonSessionConfig),
-    );
-
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should validate successfully
     await lintCommand();
   });
 
@@ -520,44 +381,6 @@ last_synced: 2024-11-13T10:00:00Z
 
     // Should validate notes from all projects
     await lintCommand();
-  });
-
-  it('detects malformed YAML in session config', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-    const vaultPath = join(testRoot, 'vault');
-
-    // Create full structure
-    mkdirSync(join(projectsRoot, 'repositories'), { recursive: true });
-    mkdirSync(join(projectsRoot, 'worktrees'), { recursive: true });
-    mkdirSync(join(vaultPath, 'projects'), { recursive: true });
-
-    // Create session config directory
-    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
-    mkdirSync(sessionConfigDir, { recursive: true });
-
-    // Write malformed YAML
-    const malformedYaml = `
-name: test
-windows:
-  - name: main
-    panes: invalid YAML: [without proper: formatting
-`;
-    writeFileSync(join(sessionConfigDir, 'bad.ghwt-session.yaml'), malformedYaml);
-
-    const config = createTestConfig(projectsRoot, vaultPath);
-    saveTestConfig(config);
-
-    // Should error on malformed YAML
-    let errorThrown = false;
-    try {
-      await lintCommand();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('process.exit')) {
-        errorThrown = true;
-      }
-    }
-
-    expect(errorThrown).toBeTruthy();
   });
 
   it('detects invalid config JSON format', async () => {

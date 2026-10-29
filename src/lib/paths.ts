@@ -79,34 +79,6 @@ export function getNotePath(vaultRoot: string, project: string, branch: string):
 }
 
 /**
- * Get the session name for a worktree (used by terminal multiplexers)
- * Combines project and normalized branch with hyphens
- * @example getSessionName('galaxy', 'branch/cool-feature') -> 'galaxy-branch-cool-feature'
- * @example getSessionName('galaxy', 'pr/1234') -> 'galaxy-pr-1234'
- */
-export function getSessionName(project: string, branch: string): string {
-  return `${project}-${normalizeBundle(branch)}`;
-}
-
-/**
- * Get the zellij session layout file path
- * Follows the same organizational structure as notes: {zellijSessionsDir}/{project}/{branch|pr}/{name}.kdl
- * @example getZellijSessionPath(projectsRoot, config, 'galaxy', 'branch/main') -> '{projectsRoot}/.zellij-sessions/galaxy/branch/main.kdl'
- * @example getZellijSessionPath(projectsRoot, config, 'galaxy', 'pr/1234') -> '{projectsRoot}/.zellij-sessions/galaxy/pr/1234.kdl'
- */
-export function getZellijSessionPath(
-  projectsRoot: string,
-  config: GhwtConfig,
-  project: string,
-  branch: string,
-): string {
-  const sessionDir = config.zellijSessionsDir || '.zellij-sessions';
-  const sessionsRoot = join(projectsRoot, sessionDir);
-  const { branchType, name } = parseBranchFromOldFormat(branch);
-  return join(sessionsRoot, project, branchType, `${normalizeBundle(name)}.kdl`);
-}
-
-/**
  * Container for all resolved project paths
  */
 export interface ProjectPaths {

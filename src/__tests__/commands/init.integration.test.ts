@@ -34,7 +34,11 @@ describe('Init command: end-to-end workspace initialization', () => {
   afterEach(() => {
     // Restore original environment
     process.chdir(originalCwd);
-    process.env.GHWT_CONFIG = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.GHWT_CONFIG;
+    } else {
+      process.env.GHWT_CONFIG = originalEnv;
+    }
     process.exit = originalExit;
 
     // Clean up test directory
@@ -59,7 +63,6 @@ describe('Init command: end-to-end workspace initialization', () => {
     expect(existsSync(join(projectsRoot, 'repositories'))).toBeTruthy();
     expect(existsSync(join(projectsRoot, 'worktrees'))).toBeTruthy();
     expect(existsSync(join(projectsRoot, 'ci-artifacts-config'))).toBeTruthy();
-    expect(existsSync(join(projectsRoot, 'terminal-session-config'))).toBeTruthy();
     expect(existsSync(join(vaultPath, 'projects'))).toBeTruthy();
   });
 
@@ -208,7 +211,7 @@ describe('Init command: end-to-end workspace initialization', () => {
     expect(existsSync(join(vaultPath, 'projects'))).toBeTruthy();
   });
 
-  it('creates all ci-artifacts-config and terminal-session-config directories', async () => {
+  it('creates the ci-artifacts-config directory', async () => {
     const projectsRoot = join(testRoot, 'projects');
 
     await initCommand({
@@ -219,7 +222,6 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     // These directories are needed for configuration files
     expect(existsSync(join(projectsRoot, 'ci-artifacts-config'))).toBeTruthy();
-    expect(existsSync(join(projectsRoot, 'terminal-session-config'))).toBeTruthy();
   });
 
   it('config file uses correct paths in JSON', async () => {
@@ -253,10 +255,7 @@ describe('Init command: end-to-end workspace initialization', () => {
 
     // Verify complete directory structure
     const projectsContents = readdirSync(projectsRoot).sort();
-    expect(projectsContents.includes('ci-artifacts-config')).toBeTruthy();
-    expect(projectsContents.includes('repositories')).toBeTruthy();
-    expect(projectsContents.includes('terminal-session-config')).toBeTruthy();
-    expect(projectsContents.includes('worktrees')).toBeTruthy();
+    expect(projectsContents).toEqual(['ci-artifacts-config', 'repositories', 'worktrees']);
 
     const vaultContents = readdirSync(vaultPath).sort();
     expect(vaultContents.includes('dashboard.md')).toBeTruthy();
@@ -358,41 +357,5 @@ describe('Init command: end-to-end workspace initialization', () => {
     }
 
     expect(exitErrorThrown).toBeTruthy();
-  });
-
-  it('includes terminal multiplexer in config if detected', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-
-    await initCommand({
-      projectsRoot,
-      vaultsPath: testRoot,
-      vaultName: 'vault',
-    });
-
-    const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
-
-    // Config may or may not have terminal multiplexer depending on system
-    // but if it does, it should be valid
-    if (configContent.terminalMultiplexer) {
-      expect(['tmux', 'zellij'].includes(configContent.terminalMultiplexer)).toBeTruthy();
-    }
-  });
-
-  it('includes terminal UI in config if detected', async () => {
-    const projectsRoot = join(testRoot, 'projects');
-
-    await initCommand({
-      projectsRoot,
-      vaultsPath: testRoot,
-      vaultName: 'vault',
-    });
-
-    const configContent = JSON.parse(readFileSync(configPath, 'utf-8')) as GhwtConfig;
-
-    // Config may or may not have terminal UI depending on system
-    // but if it does, it should be valid
-    if (configContent.terminalUI) {
-      expect(['wezterm', 'ghostty'].includes(configContent.terminalUI)).toBeTruthy();
-    }
   });
 });

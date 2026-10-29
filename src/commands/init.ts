@@ -6,32 +6,6 @@ import { GhwtConfig } from '../types.js';
 import { writeNote } from '../lib/obsidian.js';
 import { setupAgentCommands } from '../lib/agent-commands.js';
 
-async function detectTerminalMultiplexer(): Promise<'zellij' | 'tmux' | null> {
-  const tools = ['zellij', 'tmux'];
-  for (const tool of tools) {
-    try {
-      await execa(tool, ['--version']);
-      return tool as 'zellij' | 'tmux';
-    } catch {
-      // Tool not found, continue to next
-    }
-  }
-  return null;
-}
-
-async function detectTerminalUI(): Promise<'ghostty' | 'wezterm' | null> {
-  const tools = ['ghostty', 'wezterm'];
-  for (const tool of tools) {
-    try {
-      await execa(tool, ['--version']);
-      return tool as 'ghostty' | 'wezterm';
-    } catch {
-      // Tool not found, continue to next
-    }
-  }
-  return null;
-}
-
 export async function initCommand(options: {
   projectsRoot?: string;
   vaultsPath?: string;
@@ -59,7 +33,6 @@ export async function initCommand(options: {
     join(projectsRoot, 'repositories'),
     join(projectsRoot, 'worktrees'),
     join(projectsRoot, 'ci-artifacts-config'),
-    join(projectsRoot, 'terminal-session-config'),
     join(vaultPath, 'projects'),
   ];
 
@@ -72,20 +45,6 @@ export async function initCommand(options: {
     }
   }
 
-  // Detect terminal tools
-  console.log('\n🔍 Detecting terminal tools...');
-  const terminalMultiplexer = await detectTerminalMultiplexer();
-  if (terminalMultiplexer) {
-    console.log(`✅ Found ${terminalMultiplexer}`);
-  } else {
-    console.warn(`⚠️  Neither tmux nor zellij found. Install one for full functionality.`);
-  }
-
-  const terminalUI = await detectTerminalUI();
-  if (terminalUI) {
-    console.log(`✅ Found ${terminalUI}`);
-  }
-
   // Create config file
   const config: GhwtConfig = {
     projectsRoot,
@@ -94,8 +53,6 @@ export async function initCommand(options: {
     vaultPath,
     syncInterval: null,
     obsidianVaultName: vaultName,
-    ...(terminalMultiplexer && { terminalMultiplexer }),
-    ...(terminalUI && { terminalUI }),
   };
 
   // Check dependencies
