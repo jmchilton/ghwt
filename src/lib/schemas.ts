@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { GhwtConfig, NoteFrontmatter } from '../types.js';
-import { WindowConfig, TabConfig, SessionConfig } from './terminal-session-base.js';
 
 /**
  * Zod schemas for ghwt configuration validation
@@ -25,14 +24,6 @@ export const GhwtConfigSchema = z
       .union([z.number().int().min(60), z.null()])
       .default(null)
       .describe('Sync interval in seconds (minimum 60, null for no auto-sync)'),
-    terminalMultiplexer: z
-      .enum(['tmux', 'zellij'])
-      .default('tmux')
-      .describe('Terminal multiplexer to use for sessions'),
-    terminalUI: z
-      .enum(['wezterm', 'ghostty', 'none'])
-      .default('wezterm')
-      .describe('Terminal UI application'),
     editor: z
       .enum(['code', 'cursor', 'none'])
       .default('none')
@@ -55,69 +46,6 @@ export const GhwtConfigSchema = z
   .describe('GHWT global configuration');
 
 export type GhwtConfigType = z.infer<typeof GhwtConfigSchema>;
-
-// ============================================================================
-// Session Config Schemas (terminal-session-config/*.ghwt-session.yaml)
-// ============================================================================
-
-export const WindowConfigSchema: z.ZodType<WindowConfig> = z
-  .object({
-    name: z.string().describe('Window/pane name'),
-    root: z.string().optional().describe('Working directory relative to worktree root'),
-    pre: z.array(z.string()).optional().describe('Commands to run before main command'),
-    panes: z.array(z.string()).optional().describe('Commands to execute in this window'),
-    start_suspended: z
-      .boolean()
-      .optional()
-      .describe('Zellij-specific: show prompt before running commands (ignored by tmux)'),
-  })
-  .strict()
-  .describe('Terminal window configuration');
-
-export const TabConfigSchema: z.ZodType<TabConfig> = z
-  .object({
-    name: z.string().describe('Tab name'),
-    pre: z.array(z.string()).optional().describe('Commands to run before windows'),
-    windows: z
-      .array(WindowConfigSchema)
-      .min(1)
-      .describe('Windows within this tab (must have at least 1)'),
-  })
-  .strict()
-  .describe('Terminal tab with windows');
-
-export const SessionConfigSchema: z.ZodType<SessionConfig> = z
-  .object({
-    name: z.string().describe('Session name (informational)'),
-    root: z.string().optional().describe('Root directory (unused - always set to worktree path)'),
-    pre: z.array(z.string()).optional().describe('Session-level setup commands'),
-    tabs: z.array(TabConfigSchema).optional().describe('New format: tabs with windows'),
-    windows: z
-      .array(WindowConfigSchema)
-      .optional()
-      .describe('Legacy format: windows only (wrapped in default tab)'),
-    zellij_ui: z
-      .object({
-        mode: z
-          .enum(['full', 'compact', 'none'])
-          .optional()
-          .default('full')
-          .describe('UI mode: full (tab-bar + status-bar), compact (minimal), none (no bars)'),
-      })
-      .optional()
-      .describe('Zellij-specific UI configuration (ignored by tmux)'),
-  })
-  .strict()
-  .refine(
-    (data) => (data.tabs && data.tabs.length > 0) || (data.windows && data.windows.length > 0),
-    {
-      message: "Session must have either 'tabs' or 'windows' defined",
-      path: ['tabs', 'windows'],
-    },
-  )
-  .describe('Terminal session configuration');
-
-export type SessionConfigType = z.infer<typeof SessionConfigSchema>;
 
 // ============================================================================
 // Note Frontmatter Schema
@@ -187,17 +115,6 @@ export function validateGhwtConfig(data: unknown): GhwtConfig {
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(`Invalid global config:\n${formatZodError(error)}`);
-    }
-    throw error;
-  }
-}
-
-export function validateSessionConfig(data: unknown): SessionConfig {
-  try {
-    return SessionConfigSchema.parse(data) as SessionConfig;
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new Error(`Invalid session config:\n${formatZodError(error)}`);
     }
     throw error;
   }

@@ -1,9 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { load as loadYaml } from 'js-yaml';
-import { loadConfig, expandPath } from '../lib/config.js';
-import { validateGhwtConfig, validateSessionConfig } from '../lib/schemas.js';
+import { loadConfig, expandPath, getConfigFilePath } from '../lib/config.js';
+import { validateGhwtConfig } from '../lib/schemas.js';
 import { parseFrontmatter } from '../lib/obsidian.js';
 import { getNotePath } from '../lib/paths.js';
 import { listWorktrees } from '../lib/worktree-list.js';
@@ -16,7 +15,6 @@ interface LintResult {
 
 export async function lintCommand(options?: {
   verbose?: boolean;
-  sessionOnly?: boolean;
   configOnly?: boolean;
 }): Promise<void> {
   const result: LintResult = {
@@ -30,71 +28,31 @@ export async function lintCommand(options?: {
   // =========================================================================
   // 1. Global Config Validation
   // =========================================================================
-  if (!options?.sessionOnly) {
-    const globalConfigPath = join(homedir(), '.ghwtrc.json');
-    try {
-      if (!existsSync(globalConfigPath)) {
-        result.warnings.push(`Global config not found at ${globalConfigPath} (using defaults)`);
-      } else {
-        const data = readFileSync(globalConfigPath, 'utf-8');
-        const parsed = JSON.parse(data);
-        validateGhwtConfig(parsed);
-        result.passedChecks.push(`✅ Global config: Valid`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      result.errors.push(`Global config validation failed:\n${message}`);
+  const globalConfigPath = getConfigFilePath();
+  try {
+    if (!existsSync(globalConfigPath)) {
+      result.warnings.push(`Global config not found at ${globalConfigPath} (using defaults)`);
+    } else {
+      const data = readFileSync(globalConfigPath, 'utf-8');
+      const parsed = JSON.parse(data);
+      validateGhwtConfig(parsed);
+      result.passedChecks.push(`✅ Global config: Valid`);
     }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Global config validation failed:\n${message}`);
   }
 
-  // =========================================================================
-  // 2. Session Configs Validation
-  // =========================================================================
   if (!options?.configOnly) {
-    try {
-      const config = loadConfig();
-      const projectsRoot = expandPath(config.projectsRoot);
-      const configDir = join(projectsRoot, 'terminal-session-config');
-
-      if (!existsSync(configDir)) {
-        result.warnings.push(`Session config directory not found: ${configDir}`);
-      } else {
-        const sessionFiles = readdirSync(configDir).filter(
-          (f) =>
-            f.endsWith('.ghwt-session.yaml') ||
-            f.endsWith('.ghwt-session.yml') ||
-            f.endsWith('.ghwt-session.json'),
-        );
-
-        if (sessionFiles.length === 0) {
-          result.warnings.push(`No session config files found in ${configDir}`);
-        } else {
-          let validCount = 0;
-          for (const file of sessionFiles) {
-            const filePath = join(configDir, file);
-            try {
-              const content = readFileSync(filePath, 'utf-8');
-              const parsed = file.endsWith('.json') ? JSON.parse(content) : loadYaml(content);
-              validateSessionConfig(parsed);
-              validCount++;
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              result.errors.push(`Session config ${file} is invalid:\n${message}`);
-            }
-          }
-          result.passedChecks.push(
-            `✅ Session configs: ${validCount}/${sessionFiles.length} valid`,
-          );
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      result.errors.push(`Failed to validate session configs: ${message}`);
-    }
+    await checkWorkspace(result);
   }
 
+  printResults(result);
+}
+
+async function checkWorkspace(result: LintResult): Promise<void> {
   // =========================================================================
-  // 3. Project Structure Validation
+  // 2. Project Structure Validation
   // =========================================================================
   try {
     const config = loadConfig();
@@ -127,7 +85,7 @@ export async function lintCommand(options?: {
   }
 
   // =========================================================================
-  // 4. Worktree Notes Validation
+  // 3. Worktree Notes Validation
   // =========================================================================
   try {
     const config = loadConfig();
@@ -185,7 +143,7 @@ export async function lintCommand(options?: {
   }
 
   // =========================================================================
-  // 5. CI Artifact Configs Validation
+  // 4. CI Artifact Configs Validation
   // =========================================================================
   try {
     const config = loadConfig();
@@ -268,7 +226,7 @@ export async function lintCommand(options?: {
   }
 
   // =========================================================================
-  // 6. Obsidian Vault Configuration Validation
+  // 5. Obsidian Vault Configuration Validation
   // =========================================================================
   try {
     const config = loadConfig();
@@ -298,7 +256,7 @@ export async function lintCommand(options?: {
   }
 
   // =========================================================================
-  // 7. Notes Without Worktrees Detection
+  // 6. Notes Without Worktrees Detection
   // =========================================================================
   try {
     const config = loadConfig();
@@ -348,7 +306,7 @@ export async function lintCommand(options?: {
   }
 
   // =========================================================================
-  // 8. Worktrees Without Notes Detection
+  // 7. Worktrees Without Notes Detection
   // =========================================================================
   try {
     const config = loadConfig();
@@ -377,26 +335,12 @@ export async function lintCommand(options?: {
   }
 
   // =========================================================================
-  // 9. Extra Files Detection (Terminal Session Config, CI Config, CI Artifacts)
+  // 8. Extra Files Detection (CI Config, CI Artifacts)
   // =========================================================================
   try {
     const config = loadConfig();
     const projectsRoot = expandPath(config.projectsRoot);
     const vaultRoot = expandPath(config.vaultPath);
-
-    // Check terminal-session-config directory
-    const sessionConfigDir = join(projectsRoot, 'terminal-session-config');
-    if (existsSync(sessionConfigDir)) {
-      const files = readdirSync(sessionConfigDir);
-      const validPattern = /^([_\w-]+)\.ghwt-session\.(yaml|yml|json)$/;
-      const extraFiles = files.filter((f) => !validPattern.test(f));
-
-      if (extraFiles.length > 0) {
-        result.warnings.push(
-          `Unexpected files in terminal-session-config: ${extraFiles.join(', ')}`,
-        );
-      }
-    }
 
     // Check ci-artifacts-config directory
     const ciConfigDir = join(projectsRoot, 'ci-artifacts-config');
@@ -467,69 +411,9 @@ export async function lintCommand(options?: {
     const message = error instanceof Error ? error.message : String(error);
     result.errors.push(`Failed to validate file structure: ${message}`);
   }
+}
 
-  // =========================================================================
-  // 10. Zellij Sessions Without Worktrees Detection
-  // =========================================================================
-  try {
-    const config = loadConfig();
-    const projectsRoot = expandPath(config.projectsRoot);
-    const vaultRoot = expandPath(config.vaultPath);
-    const sessionDir = config.zellijSessionsDir || '.zellij-sessions';
-    const sessionsRoot = join(projectsRoot, sessionDir);
-
-    if (!existsSync(sessionsRoot)) {
-      result.warnings.push(`Zellij sessions directory not found: ${sessionsRoot}`);
-    } else {
-      let orphanSessions = 0;
-
-      const projectDirs = readdirSync(sessionsRoot).filter((name) => {
-        const path = join(sessionsRoot, name);
-        return statSync(path).isDirectory();
-      });
-
-      for (const projDir of projectDirs) {
-        const projPath = join(sessionsRoot, projDir);
-        const branchTypes = readdirSync(projPath).filter((name) => {
-          const path = join(projPath, name);
-          return statSync(path).isDirectory();
-        });
-
-        for (const branchType of branchTypes) {
-          if (branchType !== 'branch' && branchType !== 'pr') {
-            continue;
-          }
-
-          const branchPath = join(projPath, branchType);
-          const kdlFiles = readdirSync(branchPath).filter((f) => f.endsWith('.kdl'));
-
-          for (const file of kdlFiles) {
-            const name = file.slice(0, -4); // Remove .kdl extension
-            const fullBranch = `${branchType}/${name.replace(/-/g, '/')}`;
-            const notePath = getNotePath(vaultRoot, projDir, fullBranch);
-
-            if (!existsSync(notePath)) {
-              result.errors.push(
-                `Zellij session without note: ${projDir}/${branchType}/${name} (no corresponding note)`,
-              );
-              orphanSessions++;
-            }
-          }
-        }
-      }
-
-      if (orphanSessions === 0 && projectDirs.length > 0) {
-        result.passedChecks.push(`✅ Zellij sessions: All sessions have corresponding notes`);
-      }
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    result.errors.push(`Failed to validate zellij sessions: ${message}`);
-  }
-
-  // =========================================================================
-  // Print Results
-  // =========================================================================
+function printResults(result: LintResult): void {
   console.log('📊 Results:\n');
 
   if (result.passedChecks.length > 0) {

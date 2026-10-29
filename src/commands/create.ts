@@ -17,7 +17,6 @@ import {
   getCIMetadata,
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
-import { launchSession } from '../lib/terminal-session.js';
 import { getWorktreePath, getNotePath } from '../lib/paths.js';
 import { parseBranchArg } from '../lib/branch-parser.js';
 import { assertRepoExists } from '../lib/errors.js';
@@ -289,14 +288,6 @@ export async function createCommand(
     } catch {
       // Silently fail if opening fails
     }
-  }
-
-  // Launch terminal session if config exists
-  try {
-    await launchSession(project, branch, worktreePath, config, options?.verbose, notePath);
-    console.log('🖥️  Terminal session launched');
-  } catch {
-    console.log(`⚠️  Terminal session not configured`);
   }
 
   console.log('\n✅ Done!');

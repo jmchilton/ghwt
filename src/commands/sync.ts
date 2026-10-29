@@ -17,10 +17,7 @@ import {
   getCIArtifactsPath,
 } from '../lib/ci-artifacts.js';
 import { listWorktrees, getCurrentWorktreeContext } from '../lib/worktree-list.js';
-import { findSessionConfig, loadSessionConfig } from '../lib/terminal-session.js';
-import { TmuxSessionManager } from '../lib/terminal-session-tmux.js';
-import { ZellijSessionManager } from '../lib/terminal-session-zellij.js';
-import { getNotePath, getSessionName, parseBranchFromOldFormat } from '../lib/paths.js';
+import { getNotePath, parseBranchFromOldFormat } from '../lib/paths.js';
 import { WorktreeMetadata } from '../types.js';
 import { pickWorktree } from '../lib/worktree-picker.js';
 
@@ -212,34 +209,6 @@ async function syncSingleWorktree(
   }
 
   updateNoteMetadata(notePath, updates);
-
-  // Check/recreate session
-  const sessionName = getSessionName(project, branch);
-  const manager =
-    config.terminalMultiplexer === 'zellij' ? new ZellijSessionManager() : new TmuxSessionManager();
-
-  const sessionExists = await manager.sessionExists(sessionName);
-  if (!sessionExists) {
-    const configPath = findSessionConfig(project, config);
-    if (configPath) {
-      try {
-        const sessionConfig = loadSessionConfig(configPath);
-        await manager.createSession(
-          sessionName,
-          sessionConfig,
-          worktreePath,
-          project,
-          branch,
-          notePath,
-        );
-        console.log(`🖥️  Recreated session: ${sessionName}`);
-      } catch (error) {
-        if (options?.verbose) {
-          console.log(`  ⚠️  Failed to recreate session: ${error}`);
-        }
-      }
-    }
-  }
 
   console.log(
     `✅ Synced: ${project}/${branch} (ahead: ${gitInfo.commitsAhead}, behind: ${gitInfo.commitsBehind})`,
@@ -466,14 +435,12 @@ export async function syncCommand(
     }
   }
 
-  // Check for missing notes and sessions (deleted but worktree still exists)
+  // Recreate missing notes (deleted but worktree still exists)
   let recreatedCount = 0;
-  let sessionRecreatedCount = 0;
   const allWorktrees = listWorktrees(selectedProject);
 
   for (const wt of allWorktrees) {
     const notePath = getNotePath(vaultRoot, wt.project, wt.branch);
-    const sessionName = getSessionName(wt.project, wt.branch);
 
     // If worktree exists but note doesn't, recreate it
     if (!existsSync(notePath)) {
@@ -511,44 +478,9 @@ export async function syncCommand(
         errorCount++;
       }
     }
-
-    // If worktree exists but session doesn't, recreate it
-    const manager =
-      config.terminalMultiplexer === 'zellij'
-        ? new ZellijSessionManager()
-        : new TmuxSessionManager();
-
-    const sessionExists = await manager.sessionExists(sessionName);
-    if (!sessionExists) {
-      const configPath = findSessionConfig(wt.project, config);
-      if (configPath) {
-        try {
-          const sessionConfig = loadSessionConfig(configPath);
-          await manager.createSession(
-            sessionName,
-            sessionConfig,
-            wt.path,
-            wt.project,
-            wt.branch,
-            notePath,
-          );
-
-          if (options?.verbose) {
-            console.log(`🖥️  Recreated session: ${wt.project}/${wt.branch}`);
-          }
-
-          sessionRecreatedCount++;
-        } catch (error) {
-          if (options?.verbose) {
-            console.log(`⚠️  Failed to recreate session for ${wt.project}/${wt.branch}: ${error}`);
-          }
-          errorCount++;
-        }
-      }
-    }
   }
 
   console.log(
-    `\n📊 Sync complete: ${syncedCount} updated, ${recreatedCount} notes recreated, ${sessionRecreatedCount} sessions recreated, ${errorCount} errors`,
+    `\n📊 Sync complete: ${syncedCount} updated, ${recreatedCount} notes recreated, ${errorCount} errors`,
   );
 }

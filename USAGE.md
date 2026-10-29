@@ -14,18 +14,6 @@ Creates:
 - `~/projects/worktrees/` - Active development directories
 - Dashboard in Obsidian vault
 
-**Terminal Detection:**
-
-During init, ghwt automatically detects:
-
-- **Terminal Multiplexer**: Looks for `zellij` (preferred) or `tmux`
-  - Warns if neither is found (but init completes successfully)
-  - Saves detected tool to config for use with terminal sessions
-
-- **Terminal UI**: Looks for `ghostty` (preferred) or `wezterm`
-  - Saves detected tool to config if found
-  - Omits from config if none found
-
 **Note:** To prevent accidental re-initialization, `ghwt init` will bail out with an error if a config file already exists. Use `GHWT_CONFIG` environment variable to point to a different config path if you want multiple workspace configurations.
 
 ### 2. Clone a repository
@@ -74,7 +62,6 @@ Automatically:
 - Creates or checks out the branch
 - Generates Obsidian note with rich metadata
 - Opens VS Code + Obsidian (if available)
-- Launches terminal session (if config exists)
 
 ### 4. Work in your worktree
 
@@ -86,7 +73,6 @@ cd ~/projects/worktrees/galaxy/branch/cool-feature
 ghwt code --this                    # Open in VS Code
 ghwt note --this                    # Open Obsidian note
 ghwt gh --this                      # Open on GitHub
-ghwt attach --this                  # Attach to terminal
 ghwt claude --this                  # Open Claude
 ghwt path-note --this               # Get note path
 ghwt path-ci-artifacts --this       # Get artifacts path
@@ -108,10 +94,7 @@ Updates:
 - Days since activity
 - CI artifacts (for failing PRs)
 
-Recreates missing items:
-
-- Notes (if deleted but worktree exists)
-- Terminal sessions (if crashed/killed)
+Recreates missing notes (deleted but worktree still exists).
 
 ### 6. Remove when done
 
@@ -126,7 +109,6 @@ Automatically:
 - Deletes worktree directory
 - Prunes git registry
 - Archives Obsidian note
-- Kills terminal session
 
 ## Directory Structure
 
@@ -142,14 +124,11 @@ Automatically:
 │       └── pr/                # PR worktrees
 │           ├── 1234/
 │           └── 5678/
-├── ci-artifacts/              # Downloaded CI artifacts
-│   └── galaxy/
-│       └── pr/
-│           ├── 1234/
-│           └── 5678/
-└── terminal-session-config/   # Session configurations
-    ├── galaxy.ghwt-session.yaml
-    └── _default.ghwt-session.yaml
+└── ci-artifacts/              # Downloaded CI artifacts
+    └── galaxy/
+        └── pr/
+            ├── 1234/
+            └── 5678/
 
 ~/my-obsidian-vault/
 └── projects/
@@ -171,7 +150,6 @@ All convenience commands support three modes:
 ghwt code              # → Interactive picker
 ghwt note
 ghwt gh
-ghwt attach
 ghwt claude
 ```
 
@@ -196,28 +174,10 @@ ghwt gh artifact-detective feature
 ghwt code --this       # → Use current worktree (must be inside one)
 ghwt note --this
 ghwt gh --this
-ghwt attach --this
 ghwt claude --this
 ghwt path-note --this
 ghwt path-ci-artifacts --this
 ```
-
-## Terminal Sessions
-
-Persistent, reconnectable development environments:
-
-```bash
-ghwt create galaxy new-feature
-# → Automatically launches session if configured
-
-ghwt attach galaxy new-feature
-# → Reconnect to running session (survives crashes)
-```
-
-Configure sessions in `~/.ghwtrc.json`:
-
-- `terminalMultiplexer`: "tmux" (default) or "zellij"
-- `terminalUI`: "wezterm" (default) or "none"
 
 ## Claude Sessions
 
@@ -268,43 +228,9 @@ Edit `~/.ghwtrc.json`:
   "vaultPath": "~/my-obsidian-vault",
   "obsidianVaultName": "projects",
   "shellCommandExecuteId": "abc123def456",
-  "syncInterval": null,
-  "defaultBaseBranch": "dev",
-  "terminalMultiplexer": "tmux",
-  "terminalUI": "wezterm"
+  "syncInterval": null
 }
 ```
-
-### Terminal Session Configuration
-
-Create `~/projects/terminal-session-config/galaxy.ghwt-session.yaml`:
-
-```yaml
-name: galaxy
-root: '{{worktree_path}}'
-
-pre:
-  - '[ -f .venv/bin/activate ] && source .venv/bin/activate'
-
-windows:
-  - name: client
-    root: client
-    panes:
-      - npm run dev
-
-  - name: server
-    panes:
-      - make run
-
-  - name: test
-    # Empty for interactive testing
-```
-
-**Template variables:**
-
-- `{{worktree_path}}` - Full path to worktree
-- `{{project}}` - Project name
-- `{{branch}}` - Branch name (with slashes normalized)
 
 ## Common Workflows
 
@@ -313,7 +239,7 @@ windows:
 ```bash
 cd ~/projects
 ghwt create galaxy cool-feature
-# → Creates worktree, opens VS Code + Obsidian, launches terminal
+# → Creates worktree, opens VS Code + Obsidian
 ```
 
 ### Work on a PR
@@ -350,7 +276,7 @@ ghwt code
 
 # From within worktree, jump to sibling
 ghwt code --this
-# → Opens current worktree (useful if terminal is detached)
+# → Opens current worktree
 ```
 
 ## Troubleshooting
@@ -362,17 +288,6 @@ The `--this` flag only works when you're inside a worktree. Make sure you're in:
 ```
 ~/projects/worktrees/{project}/{branch-or-pr}/{name}/
 ```
-
-### Session not launching
-
-Check if session config exists and is valid:
-
-```bash
-ghwt lint
-# → Validates all configs
-```
-
-Create a config file or use `_default.ghwt-session.yaml` as fallback.
 
 ### CI artifacts not downloading
 

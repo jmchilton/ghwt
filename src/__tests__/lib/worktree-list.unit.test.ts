@@ -37,7 +37,6 @@ describe('worktree-list', () => {
           worktreesDir: 'worktrees',
           vaultPath: join(testRoot, 'vault'),
           obsidianVaultName: 'test-vault',
-          terminalMultiplexer: 'tmux',
         }),
       );
 
@@ -91,7 +90,6 @@ describe('worktree-list', () => {
           worktreesDir: 'worktrees',
           vaultPath: join(testRoot, 'vault'),
           obsidianVaultName: 'test-vault',
-          terminalMultiplexer: 'tmux',
         }),
       );
 
@@ -124,7 +122,6 @@ describe('worktree-list', () => {
           worktreesDir: 'worktrees',
           vaultPath: join(testRoot, 'vault'),
           obsidianVaultName: 'test-vault',
-          terminalMultiplexer: 'tmux',
         }),
       );
 
@@ -157,7 +154,6 @@ describe('worktree-list', () => {
           worktreesDir: 'worktrees',
           vaultPath: join(testRoot, 'vault'),
           obsidianVaultName: 'test-vault',
-          terminalMultiplexer: 'tmux',
         }),
       );
 
@@ -187,7 +183,6 @@ describe('worktree-list', () => {
           worktreesDir: 'worktrees',
           vaultPath: join(testRoot, 'vault'),
           obsidianVaultName: 'test-vault',
-          terminalMultiplexer: 'tmux',
         }),
       );
 
@@ -219,7 +214,6 @@ describe('worktree-list', () => {
           worktreesDir: 'worktrees',
           vaultPath: join(testRoot, 'vault'),
           obsidianVaultName: 'test-vault',
-          terminalMultiplexer: 'tmux',
         }),
       );
 

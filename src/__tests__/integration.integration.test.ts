@@ -18,8 +18,6 @@ function createTestConfig(projectsRoot: string): GhwtConfig {
     worktreesDir: 'worktrees',
     vaultPath: join(projectsRoot, 'vault'),
     syncInterval: null,
-    terminalMultiplexer: 'tmux',
-    terminalUI: 'wezterm',
   };
 }
 

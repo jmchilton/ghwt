@@ -26,9 +26,10 @@ describe('GhwtConfigSchema: editor', () => {
     expect(() => GhwtConfigSchema.parse({ ...MINIMAL_CONFIG, editor: 'vim' })).toThrow();
   });
 
-  it('leaves the other launch defaults alone', () => {
-    const parsed = GhwtConfigSchema.parse(MINIMAL_CONFIG);
-    expect(parsed.terminalUI).toBe('wezterm');
-    expect(parsed.terminalMultiplexer).toBe('tmux');
-  });
+  it.each(['terminalMultiplexer', 'terminalUI', 'zellijSessionsDir'])(
+    'rejects removed %s',
+    (key) => {
+      expect(() => GhwtConfigSchema.parse({ ...MINIMAL_CONFIG, [key]: 'tmux' })).toThrow();
+    },
+  );
 });

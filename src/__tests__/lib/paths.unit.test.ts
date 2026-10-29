@@ -9,8 +9,6 @@ describe('paths', () => {
     worktreesDir,
     vaultPath: '/vault',
     syncInterval: null,
-    terminalMultiplexer: 'tmux',
-    terminalUI: 'wezterm',
   });
 
   it('should construct worktree path for branch with new hierarchy', () => {

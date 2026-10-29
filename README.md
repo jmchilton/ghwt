@@ -6,8 +6,7 @@ Worktree-centered development task dashboard with Obsidian integration.
 
 - **Worktree Management**: Create, track, and remove git worktrees for branches and PRs
 - **Worktree Picker**: Interactive CLI menu for quick selection with fuzzy search and smart filtering
-- **Convenience Commands**: Quick access to code editor, notes, GitHub, terminal sessions, and Claude
-- **Terminal Sessions**: Auto-detects and configures zellij/tmux + ghostty/wezterm for per-repo session configs (dev server, testing, interactive shells)
+- **Convenience Commands**: Quick access to code editor, notes, GitHub, and Claude
 - **Claude Sessions**: Per-worktree Claude Code conversations with independent history and resume support
 - **CI Artifact Integration**: Auto-fetch GitHub Actions artifacts for failing PRs with smart resume mode
 - **Obsidian Integration**: Auto-generate markdown notes with rich metadata for each worktree
@@ -113,15 +112,12 @@ Updates:
 - Days since activity
 - CI artifacts (for failing PRs)
 
-**Recreates missing items:**
-
-- **Notes**: If a worktree exists but its note was deleted, sync recreates it with fresh metadata
-- **Terminal Sessions**: If a worktree's tmux session is missing (crashed, killed, etc.), sync recreates it from the session config
+**Recreates missing notes:** if a worktree exists but its note was deleted, sync recreates it with fresh metadata.
 
 Example output:
 
 ```
-📊 Sync complete: 3 updated, 1 note recreated, 2 sessions recreated, 0 errors
+📊 Sync complete: 3 updated, 1 notes recreated, 0 errors
 ```
 
 ### Remove a worktree
@@ -136,37 +132,6 @@ Automatically:
 - Deletes worktree directory
 - Prunes git worktree registry
 - Archives Obsidian note to `~/projects/old/`
-- Kills terminal session (if running)
-
-### Terminal Sessions
-
-Persistent, reconnectable development environments with tmux or zellij multiplexer:
-
-```bash
-ghwt create galaxy new-feature
-# → Automatically launches session (if config exists)
-
-ghwt attach galaxy new-feature
-# → Reconnect to existing session (survives terminal crashes)
-
-# Clean sessions
-ghwt clean-session                    # → Interactive picker
-ghwt clean-session galaxy new-feature # Kill specific session
-ghwt clean-session --this             # Kill current worktree's session
-ghwt clean-session --all              # Kill all ghwt sessions
-ghwt clean-session-all                # Shortcut for clean-session --all
-```
-
-**Features:**
-
-- Multiple tabs/panes per worktree (dev server, tests, interactive shell)
-- Auto-virtualenv activation (`.venv/bin/activate`)
-- Persistent sessions (tmux or zellij, reattachable anytime)
-- Configurable multiplexer (global default in `~/.ghwtrc.json`)
-- UI options: WezTerm wrapper, direct zellij, or raw multiplexer
-- Works locally and remotely (SSH, containers)
-- Gracefully degrades if no config (sessions optional)
-- Auto-recreate: `attach` recreates missing session if config exists
 
 ### Claude Sessions
 
@@ -213,12 +178,6 @@ ghwt gh                            # → Pick from all worktrees
 ghwt gh artifact-detective         # → Pick from artifact-detective only
 ghwt gh galaxy 21199               # → Open directly (reads PR URL from note or constructs branch URL)
 ghwt gh --this                     # → Open current worktree on GitHub
-
-# Attach to terminal session
-ghwt attach                        # → Pick from all worktrees
-ghwt attach galaxy                 # → Pick from galaxy sessions only
-ghwt attach galaxy 21199           # → Attach directly
-ghwt attach --this                 # → Attach to current worktree's session
 
 # Open Claude in worktree
 ghwt claude                        # → Pick from all worktrees
@@ -270,10 +229,9 @@ Each worktree note includes clickable links for instant access to common actions
 }
 ```
 
-5. Done! Each new worktree note will have three action links at the top automatically:
+5. Done! Each new worktree note will have two action links at the top automatically:
    - 📝 Open Code
    - 📄 Open Note
-   - ⌨️ Open Terminal
 
 The links automatically use the `project` and `branch` from the note's YAML frontmatter and pass them as variables to the shell command.
 
@@ -290,19 +248,9 @@ Edit `~/.ghwtrc.json`:
   "obsidianVaultName": "projects",
   "shellCommandExecuteId": "abc123def456",
   "syncInterval": null,
-  "defaultBaseBranch": "dev",
-  "terminalMultiplexer": "tmux",
-  "terminalUI": "wezterm",
   "editor": "none"
 }
 ```
-
-**Terminal Configuration Options:**
-
-- `terminalMultiplexer`: `"tmux"` (default) or `"zellij"` - Which multiplexer to use for sessions
-- `terminalUI`: `"wezterm"` (default) or `"none"` - How to launch sessions
-  - `"wezterm"`: Launch WezTerm with multiplexer inside (modern UI)
-  - `"none"`: Launch multiplexer directly (native zellij UI or raw tmux)
 
 **Editor Configuration Options:**
 
@@ -313,7 +261,7 @@ Edit `~/.ghwtrc.json`:
   - `"cursor"`: Open Cursor
   - Ignored if the chosen editor's CLI isn't on `PATH`
 
-> **Note:** `ci-artifacts-config/` and `terminal-session-config/` directories are automatically resolved relative to `projectsRoot` and do not need to be configured.
+> **Note:** the `ci-artifacts-config/` directory is resolved relative to `projectsRoot` and does not need to be configured.
 
 ### CI Artifacts Configuration
 
@@ -330,66 +278,6 @@ Example for Galaxy:
 ```
 
 When ghwt syncs or creates worktrees with failing PRs, it will automatically detect and use the config file for that repository. See [gh-ci-artifacts docs](https://github.com/jmchilton/gh-ci-artifacts) for config options.
-
-### Terminal Session Configuration
-
-Place `.ghwt-session.yaml`, `.ghwt-session.yml`, or `.ghwt-session.json` config files in:
-
-```
-~/projects/terminal-session-config/
-```
-
-**Per-repository config:**
-
-```yaml
-# ~/projects/terminal-session-config/galaxy.ghwt-session.yaml
-name: galaxy
-root: '{{worktree_path}}'
-
-pre:
-  - '[ -f .venv/bin/activate ] && source .venv/bin/activate'
-
-windows:
-  - name: client
-    root: client
-    panes:
-      - npm run dev
-
-  - name: server
-    panes:
-      - make run
-
-  - name: test
-    # Empty pane for interactive testing
-```
-
-**Default fallback config (optional):**
-If a repository doesn't have a specific config, ghwt will look for `_default.ghwt-session.yaml`:
-
-```yaml
-# ~/projects/terminal-session-config/_default.ghwt-session.yaml
-# Used for any repository without its own config file
-```
-
-**Template variables** (substituted automatically):
-
-- `{{worktree_path}}` - Full path to worktree
-- `{{project}}` - Project name (e.g., "galaxy")
-- `{{branch}}` - Branch name (without slashes)
-
-**Sections:**
-
-- `name` - Session name (prefixed with project-branch)
-- `root` - Session root directory (default: worktree_path)
-- `pre` - Commands to run before each pane (useful for venv activation)
-- `windows` - List of windows/tabs with panes and startup commands
-
-**Format & Multiplexer Support:**
-
-- Single unified format works with both tmux and zellij
-- Windows and panes are automatically compiled to the appropriate multiplexer syntax
-- Pre-commands run before each pane (for virtualenv activation, etc.)
-- When `ghwt create` runs, it automatically detects the config and launches a session using the configured multiplexer and UI
 
 ## Metadata Fields
 
@@ -475,7 +363,6 @@ src/
 │   ├── create.ts          # Worktree creation
 │   ├── sync.ts            # Metadata sync
 │   ├── rm.ts              # Worktree removal
-│   ├── attach.ts          # Terminal session attachment
 │   ├── code.ts            # Open worktree in VS Code
 │   ├── note.ts            # Open Obsidian note
 │   ├── gh.ts              # Open GitHub branch/PR
@@ -485,17 +372,12 @@ src/
 │   ├── ci-artifacts-clean.ts     # Clean CI artifacts
 │   ├── path-ci-artifacts.ts      # Output CI artifacts path
 │   ├── path-note.ts              # Output note path
-│   ├── clean-session.ts          # Kill terminal sessions
 │   ├── lint.ts                   # Validate configs
 │   └── dashboard.ts       # Open Obsidian dashboard
 └── lib/
     ├── git.ts                      # Git operations
     ├── github.ts                   # GitHub API (via gh CLI)
     ├── ci-artifacts.ts             # gh-ci-artifacts integration
-    ├── terminal-session.ts         # Session manager dispatcher
-    ├── terminal-session-base.ts    # Base interfaces
-    ├── terminal-session-tmux.ts    # Tmux backend implementation
-    ├── terminal-session-zellij.ts  # Zellij backend implementation
     ├── worktree-picker.ts          # Interactive worktree selector
     ├── worktree-list.ts            # Worktree enumeration
     ├── obsidian.ts                 # Note management
@@ -512,20 +394,6 @@ src/
 - **Partial success handling**: Accepts exit codes 1 & 2 (partial/incomplete downloads)
 - **Path helpers**: `ghwt path-ci-artifacts --this` outputs artifact path for scripting
 
-### Terminal Session Integration
-
-- **Multiplexer abstraction**: Unified interface for tmux and zellij
-- **Multiple backends**: Tmux (default) or zellij via pluggable managers
-- **Per-repo configs**: YAML-based session templates in `terminal-session-config/<repo>.ghwt-session.yaml`
-- **Default fallback**: If no repo config exists, uses `terminal-session-config/_default.ghwt-session.yaml`
-- **Unified config format**: Single YAML format compiles to appropriate multiplexer syntax
-- **Auto-virtualenv**: Pre-commands like `. .venv/bin/activate` run before pane startup
-- **Multiple windows**: Configure tabs for dev servers, testing, interactive shells
-- **Template variables**: Substitute `{{worktree_path}}`, `{{project}}`, `{{branch}}` in configs
-- **UI options**: WezTerm wrapper, direct multiplexer, or configurable per-project
-- **Graceful degradation**: No config = no session, everything else works
-- **Session cleanup**: `ghwt rm` kills session before removing worktree
-
 ### Worktree Picker
 
 - **Interactive selection**: Beautiful CLI menu with arrow key navigation
@@ -534,7 +402,7 @@ src/
 - **Fast path**: Full args provided bypasses picker (direct execution)
 - **Auto-select**: Single option automatically selected
 - **`--this` flag**: Skip picker and use current worktree (requires running from within a worktree)
-- **Integrated**: Used by `code`, `note`, `gh`, `attach`, `claude`, `path-note`, and `path-ci-artifacts` commands
+- **Integrated**: Used by `code`, `note`, `gh`, `claude`, `path-note`, and `path-ci-artifacts` commands
 - **Enumeration**: Scans worktrees directory and sorts by project then branch
 
 ### Claude Sessions Integration
@@ -561,10 +429,6 @@ src/
 - `git` and `gh` CLI - Git and GitHub operations
 - `claude` - Claude Code CLI (for opening Claude sessions)
 - `gh-ci-artifacts` - CI artifact downloads (installed on demand via npx)
-- `wezterm` - Terminal emulator (optional, for sessions with `terminalUI: "wezterm"`)
-- **Terminal Multiplexer** (one of):
-  - `tmux` - Terminal multiplexer (default, for session persistence)
-  - `zellij` - Terminal multiplexer (alternative, set `terminalMultiplexer: "zellij"` in config)
 
 ## Development
 
